@@ -39,7 +39,7 @@ public sealed class LocalAiService : IDisposable
         if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"{ProviderName(settings)} 返回 HTTP {(int)response.StatusCode}。");
         return ParseResult(prompt, raw, TimeSpan.Zero, "画面");
     }
-    private static string BuildPrompt(ActivityContext context) => $"你是一个极简事务记录助手。根据本地活动上下文判断是否可能完成了一件事。不要编造看不到的细节；控件文本只用于判断，不要复述敏感信息。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
+    private static string BuildPrompt(ActivityContext context) => $"你是一个极简事务记录助手。根据本地活动上下文和一段时间的证据，判断是否可能完成了一件事。优先依据应用/窗口变化、焦点控件、有效活动时长和输入活跃度；剪贴板只能作为辅助线索，不要复述其中的敏感内容。不要编造看不到的细节。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
     private static object JsonSchemaFormat => new { type = "json_schema", json_schema = new { name = "donebubble_result", strict = true, schema = new { type = "object", properties = new { done = new { type = "boolean" }, summary = new { type = "string" }, category = new { type = "string", @enum = new[] { "轻", "中", "重" } }, confidence = new { type = "number" } }, required = new[] { "done", "summary", "category", "confidence" }, additionalProperties = false } } };
     private static object JsonObjectFormat => new { type = "json_object" };
     private static bool IsDeepSeek(Settings settings) => settings.AiEndpoint.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) || settings.AiModel.Contains("deepseek", StringComparison.OrdinalIgnoreCase);

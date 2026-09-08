@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Automation;
+using System.Runtime.InteropServices;
 using DoneBubble.Models;
 using CapturedActivityContext = DoneBubble.Models.ActivityContext;
 namespace DoneBubble.Services;
@@ -21,7 +22,7 @@ public sealed class ActivityContextCollector
             using var process = Process.GetProcessById((int)processId);
             if (process.ProcessName.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return null;
             var focused = ReadFocusedText();
-            return new CapturedActivityContext(process.ProcessName, (int)processId, NativeMethods.WindowTitle(handle), NativeMethods.WindowClass(handle), TryPath(process), focused.Description, Redact(focused.Text), duration, DateTime.Now);
+            return new CapturedActivityContext(process.ProcessName, (int)processId, NativeMethods.WindowTitle(handle), NativeMethods.WindowClass(handle), TryPath(process), focused.Description, Redact(focused.Text), duration, DateTime.Now, "", Redact(ReadClipboardText()), NativeMethods.GetIdleSeconds());
         }
         catch { return null; }
     }
@@ -48,6 +49,23 @@ public sealed class ActivityContextCollector
         result = LongSecret.Replace(result, "[长字符串已隐藏]");
         return result.Length <= 900 ? result : result[..900];
     }
+    private static string? ReadClipboardText()
+    {
+        try
+        {
+            if (!NativeMethods.OpenClipboard(IntPtr.Zero)) return null;
+            try
+            {
+                IntPtr handle = NativeMethods.GetClipboardData(13); // CF_UNICODETEXT
+                if (handle == IntPtr.Zero) return null;
+                IntPtr pointer = NativeMethods.GlobalLock(handle);
+                if (pointer == IntPtr.Zero) return null;
+                try { return Marshal.PtrToStringUni(pointer); } finally { NativeMethods.GlobalUnlock(handle); }
+            }
+            finally { NativeMethods.CloseClipboard(); }
+        }
+        catch { return null; }
+    }
     private static class NativeMethods
     {
         [System.Runtime.InteropServices.DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
@@ -56,5 +74,13 @@ public sealed class ActivityContextCollector
         public static string WindowTitle(IntPtr handle) { var text = new StringBuilder(512); GetWindowText(handle, text, text.Capacity); return text.ToString().Trim(); }
         [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)] private static extern int GetClassName(IntPtr hWnd, StringBuilder text, int count);
         public static string WindowClass(IntPtr handle) { var text = new StringBuilder(256); GetClassName(handle, text, text.Capacity); return text.ToString().Trim(); }
+        [DllImport("user32.dll")] public static extern bool OpenClipboard(IntPtr owner);
+        [DllImport("user32.dll")] public static extern bool CloseClipboard();
+        [DllImport("user32.dll")] public static extern IntPtr GetClipboardData(uint format);
+        [DllImport("kernel32.dll")] public static extern IntPtr GlobalLock(IntPtr handle);
+        [DllImport("kernel32.dll")] public static extern bool GlobalUnlock(IntPtr handle);
+        [DllImport("user32.dll")] private static extern bool GetLastInputInfo(ref LASTINPUTINFO info);
+        [StructLayout(LayoutKind.Sequential)] private struct LASTINPUTINFO { public uint cbSize; public uint dwTime; }
+        public static double GetIdleSeconds() { var info = new LASTINPUTINFO { cbSize = (uint)Marshal.SizeOf<LASTINPUTINFO>() }; return GetLastInputInfo(ref info) ? (Environment.TickCount64 - info.dwTime) / 1000d : 0; }
     }
 }
