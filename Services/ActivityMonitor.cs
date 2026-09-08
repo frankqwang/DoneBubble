@@ -20,26 +20,39 @@ public sealed class ActivityMonitor : IDisposable
     private bool busy;
     private readonly List<string> observations = new();
     public event Action<ActivityCandidate>? CandidateFound;
-    public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, 15000); }
+    public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, Timeout.Infinite); }
     private async void Tick(object? state)
     {
-        if (busy || !settings.Value.AiAssistEnabled || GetIdleSeconds() > 90) { ResetIfIdle(); return; }
-        string nextApplication = GetForegroundApplication(); string nextTitle = GetForegroundTitle();
-        if (string.IsNullOrWhiteSpace(nextApplication) || nextApplication.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return;
-        if (!nextApplication.Equals(application, StringComparison.OrdinalIgnoreCase) || !SameTopic(title, nextTitle))
+        try
         {
-            await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null; observations.Clear();
-        }
-        else if (started == default) started = DateTime.Now;
-        else
-        {
-            latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
-            if (latestContext != null)
+            if (busy || !settings.Value.AiAssistEnabled || GetIdleSeconds() > 90) { ResetIfIdle(); return; }
+            string nextApplication = GetForegroundApplication(); string nextTitle = GetForegroundTitle();
+            if (string.IsNullOrWhiteSpace(nextApplication) || nextApplication.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return;
+            if (!nextApplication.Equals(application, StringComparison.OrdinalIgnoreCase) || !SameTopic(title, nextTitle))
             {
-                string sample = $"{latestContext.CapturedAt:HH:mm:ss}｜{latestContext.Application}｜{latestContext.WindowTitle}｜焦点：{latestContext.FocusedControl ?? "未知"}";
-                if (!observations.Contains(sample)) { observations.Add(sample); if (observations.Count > 8) observations.RemoveAt(0); }
+                await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null; observations.Clear();
+            }
+            else if (started == default) started = DateTime.Now;
+            else
+            {
+                latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
+                if (latestContext != null)
+                {
+                    string sample = $"{latestContext.CapturedAt:HH:mm:ss}｜{latestContext.Application}｜{latestContext.WindowTitle}｜焦点：{latestContext.FocusedControl ?? "未知"}";
+                    if (!observations.Contains(sample)) { observations.Add(sample); if (observations.Count > 8) observations.RemoveAt(0); }
+                }
             }
         }
+        finally
+        {
+            ScheduleNext();
+        }
+    }
+    private void ScheduleNext()
+    {
+        double minutes = started == default ? 0 : (DateTime.Now - started).TotalMinutes;
+        int seconds = minutes switch { <= 1 => 5, <= 5 => 10, <= 15 => 20, <= 30 => 30, _ => 60 };
+        try { timer.Change(TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan); } catch (ObjectDisposedException) { }
     }
     private async Task ConsiderAsync()
     {
