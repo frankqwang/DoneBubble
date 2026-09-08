@@ -52,6 +52,7 @@ public partial class DebugWindow : Window
         var captured = await CaptureSeriesAsync();
         var context = captured.Context;
         ShowContext(context);
+        if (captured.Images.Count > 0) ScreenshotView.Source = ToImage(captured.Images[0]);
         if (context == null) { Status.Text = "未能读取当前窗口"; return; }
         Status.Text = "正在请求 LM Studio / DeepSeek…";
         try
