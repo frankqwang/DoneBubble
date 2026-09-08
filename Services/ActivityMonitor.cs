@@ -63,14 +63,17 @@ public sealed class ActivityMonitor : IDisposable
     {
         if (busy || started == default || latestContext == null) return null;
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
+        // Reset the live session before awaiting the model, but keep its evidence for
+        // this request and for the AI log. ResetSession clears the live frame buffer.
+        var sessionFrames = frames.ConvertAll(frame => frame);
         ResetSession();
         busy = true;
         try
         {
-            var result = frames.Count > 0
-                ? await ai.AnalyzeImagesAsync(frames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
+            var result = sessionFrames.Count > 0
+                ? await ai.AnalyzeImagesAsync(sessionFrames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
                 : await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
-            if (frames.Count > 0) result = result with { Images = frames.ConvertAll(Convert.ToBase64String) };
+            if (sessionFrames.Count > 0) result = result with { Images = sessionFrames.ConvertAll(Convert.ToBase64String) };
             if (result.Candidate != null) lastCandidate = DateTime.Now;
             return result;
         }
