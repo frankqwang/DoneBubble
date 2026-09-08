@@ -20,6 +20,7 @@ public partial class MainWindow : Window
     private readonly RestWindow restWindow;
     private DateTime date = DateTime.Today;
     public event Action? HistoryRequested;
+    public event Action? BubbleClicked;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
         InitializeComponent(); this.model = model; this.settings = settings; DataContext = model;
@@ -96,6 +97,7 @@ public partial class MainWindow : Window
     private void CandidateAccept_Click(object sender, RoutedEventArgs e) { model.AcceptCandidate(); ResizeCard(); }
     private void CandidateDismiss_Click(object sender, RoutedEventArgs e) { model.DismissCandidate(); ResizeCard(); }
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
+    private void SessionSummary_Click(object sender, RoutedEventArgs e) { BubbleClicked?.Invoke(); }
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing the floating window never terminates the tray application.

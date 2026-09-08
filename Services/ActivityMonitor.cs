@@ -54,6 +54,20 @@ public sealed class ActivityMonitor : IDisposable
         int seconds = minutes switch { <= 1 => 5, <= 5 => 10, <= 15 => 20, <= 30 => 30, _ => 60 };
         try { timer.Change(TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan); } catch (ObjectDisposedException) { }
     }
+    public async Task FlushSessionAsync()
+    {
+        if (busy || !settings.Value.AiAssistEnabled || started == default || latestContext == null) return;
+        var context = latestContext with { RecentObservations = string.Join("\n", observations) };
+        ResetSession();
+        busy = true;
+        try
+        {
+            var candidate = await ai.JudgeAsync(context, settings.Value).ConfigureAwait(false);
+            if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate); }
+        }
+        catch { /* AI is optional; a failed manual flush should not interrupt recording. */ }
+        finally { busy = false; ScheduleNext(); }
+    }
     private async Task ConsiderAsync()
     {
         if (started == default || (DateTime.Now - started).TotalMinutes < 10 || lastCandidate.Date == DateTime.Today && lastCandidate >= started) return;
@@ -62,7 +76,8 @@ public sealed class ActivityMonitor : IDisposable
         catch { /* AI is optional; an unavailable local server is silent. */ }
         finally { busy = false; }
     }
-    private void ResetIfIdle() { if (GetIdleSeconds() > 90) { application = title = ""; started = default; latestContext = null; observations.Clear(); } }
+    private void ResetIfIdle() { if (GetIdleSeconds() > 90) ResetSession(); }
+    private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); }
     private static bool SameTopic(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase) || (a.Length > 0 && b.Contains(a, StringComparison.OrdinalIgnoreCase));
     private static string GetForegroundApplication() { IntPtr handle = GetForegroundWindow(); GetWindowThreadProcessId(handle, out uint id); try { using var process = Process.GetProcessById((int)id); return process.ProcessName; } catch { return ""; } }
     private static string GetForegroundTitle() { var buffer = new StringBuilder(512); GetWindowText(GetForegroundWindow(), buffer, buffer.Capacity); return buffer.ToString().Trim(); }
