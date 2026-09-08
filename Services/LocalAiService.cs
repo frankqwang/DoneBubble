@@ -15,28 +15,44 @@ public sealed class LocalAiService : IDisposable
     }
     public async Task<AiAnalysisResult> AnalyzeAsync(ActivityContext context, Settings settings, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(settings.AiEndpoint)) return new(BuildPrompt(context), "", null, "没有配置 LM Studio 地址。");
+        if (string.IsNullOrWhiteSpace(settings.AiEndpoint)) return new(BuildPrompt(context), "", null, "没有配置 AI 地址。");
         string prompt = BuildPrompt(context);
-        var body = new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = prompt } } };
-        using var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync(settings.AiEndpoint, content, cancellationToken).ConfigureAwait(false);
+        object body = IsDeepSeek(settings) ?
+            new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, thinking = new { type = "disabled" }, response_format = JsonObjectFormat, messages = new[] { new { role = "user", content = prompt } } } :
+            new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = prompt } } };
+        using var request = CreateRequest(body, settings);
+        using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         string raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"LM Studio 返回 HTTP {(int)response.StatusCode}。");
+        if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"{ProviderName(settings)} 返回 HTTP {(int)response.StatusCode}。");
         return ParseResult(prompt, raw, context.Duration, "活动");
     }
     public async Task<AiAnalysisResult> AnalyzeImageAsync(string base64Png, string contextDescription, Settings settings, CancellationToken cancellationToken = default)
     {
         string prompt = $"你是一个极简事务记录助手。根据这张用户主动提供的当前工作窗口截图和上下文，判断是否可能完成了一件事。不要猜测看不到的细节；只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。上下文：{contextDescription}。持续阅读、等待、娱乐或无法判断时 done=false。";
         var message = new object[] { new { type = "text", text = prompt }, new { type = "image_url", image_url = new { url = "data:image/png;base64," + base64Png } } };
-        var body = new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = message } } };
-        using var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
-        using var response = await client.PostAsync(settings.AiEndpoint, content, cancellationToken).ConfigureAwait(false);
+        object body = IsDeepSeek(settings) ?
+            new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, thinking = new { type = "disabled" }, response_format = JsonObjectFormat, messages = new[] { new { role = "user", content = message } } } :
+            new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = message } } };
+        using var request = CreateRequest(body, settings);
+        using var response = await client.SendAsync(request, cancellationToken).ConfigureAwait(false);
         string raw = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"LM Studio 返回 HTTP {(int)response.StatusCode}。");
+        if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"{ProviderName(settings)} 返回 HTTP {(int)response.StatusCode}。");
         return ParseResult(prompt, raw, TimeSpan.Zero, "画面");
     }
     private static string BuildPrompt(ActivityContext context) => $"你是一个极简事务记录助手。根据本地活动上下文判断是否可能完成了一件事。不要编造看不到的细节；控件文本只用于判断，不要复述敏感信息。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
     private static object JsonSchemaFormat => new { type = "json_schema", json_schema = new { name = "donebubble_result", strict = true, schema = new { type = "object", properties = new { done = new { type = "boolean" }, summary = new { type = "string" }, category = new { type = "string", @enum = new[] { "轻", "中", "重" } }, confidence = new { type = "number" } }, required = new[] { "done", "summary", "category", "confidence" }, additionalProperties = false } } };
+    private static object JsonObjectFormat => new { type = "json_object" };
+    private static bool IsDeepSeek(Settings settings) => settings.AiEndpoint.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) || settings.AiModel.Contains("deepseek", StringComparison.OrdinalIgnoreCase);
+    private static string ProviderName(Settings settings) => IsDeepSeek(settings) ? "DeepSeek" : "LM Studio";
+    private static HttpRequestMessage CreateRequest(object body, Settings settings)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, settings.AiEndpoint)
+        {
+            Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json")
+        };
+        if (!string.IsNullOrWhiteSpace(settings.AiApiKey)) request.Headers.TryAddWithoutValidation("Authorization", "Bearer " + settings.AiApiKey.Trim());
+        return request;
+    }
     private static AiAnalysisResult ParseResult(string prompt, string raw, TimeSpan duration, string subject)
     {
         try

@@ -17,6 +17,8 @@ public sealed class Settings
     public bool AiAssistEnabled { get; set; }
     public string AiEndpoint { get; set; } = "http://127.0.0.1:1234/v1/chat/completions";
     public string AiModel { get; set; } = "qwen3.5-4b";
+    // Stored only in the per-user settings file; never commit this value to source control.
+    public string AiApiKey { get; set; } = "";
 }
 public sealed class SettingsService
 {
