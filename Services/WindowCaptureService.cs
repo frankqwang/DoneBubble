@@ -15,6 +15,12 @@ public sealed class WindowCaptureService
         if (width <= 0 || height <= 0 || width > 8000 || height > 8000) return null;
         using var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
         using (var graphics = Graphics.FromImage(bitmap)) graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
-        using var stream = new MemoryStream(); bitmap.Save(stream, ImageFormat.Png); return stream.ToArray();
+        using var stream = new MemoryStream();
+        var encoder = ImageCodecInfo.GetImageEncoders().FirstOrDefault(item => item.FormatID == ImageFormat.Jpeg.Guid);
+        if (encoder == null) { bitmap.Save(stream, ImageFormat.Jpeg); return stream.ToArray(); }
+        using var quality = new EncoderParameters(1);
+        quality.Param[0] = new EncoderParameter(Encoder.Quality, 68L);
+        bitmap.Save(stream, encoder, quality);
+        return stream.ToArray();
     }
 }

@@ -1,5 +1,8 @@
 <Window x:Class="DoneBubble.HistoryWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:local="clr-namespace:DoneBubble" Title="DoneBubble · 今天" Width="900" Height="620" MinWidth="680" MinHeight="420" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Foreground="#EDF2F7" FontFamily="Segoe UI, Microsoft YaHei UI" ShowInTaskbar="False" Topmost="False" ResizeMode="CanResizeWithGrip" WindowStartupLocation="CenterScreen" PreviewKeyDown="Window_KeyDown" SizeChanged="Window_SizeChanged">
- <Window.Resources><BooleanToVisibilityConverter x:Key="Bool"/><local:Base64ImageConverter x:Key="Base64Image"/><local:JsonFormatConverter x:Key="JsonFormat"/></Window.Resources>
+ <Window.Resources>
+  <BooleanToVisibilityConverter x:Key="Bool"/><local:Base64ImageConverter x:Key="Base64Image"/><local:JsonFormatConverter x:Key="JsonFormat"/>
+  <Style TargetType="ScrollBar"><Setter Property="Background" Value="#151C27"/><Setter Property="Foreground" Value="#53657A"/><Setter Property="Width" Value="8"/><Setter Property="MinWidth" Value="8"/><Setter Property="Opacity" Value="0.9"/><Setter Property="BorderThickness" Value="0"/><Style.Triggers><Trigger Property="Orientation" Value="Horizontal"><Setter Property="Height" Value="8"/><Setter Property="MinHeight" Value="8"/><Setter Property="Width" Value="Auto"/></Trigger></Style.Triggers></Style>
+ </Window.Resources>
  <Border Margin="8" Background="#F5222B38" CornerRadius="18" BorderBrush="#4C596B" BorderThickness="1" Padding="20" MouseLeftButtonDown="Window_Drag">
   <Grid>
    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>

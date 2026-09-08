@@ -66,7 +66,7 @@ public sealed class ActivityMonitor : IDisposable
         // Reset the live session before awaiting the model, but keep its evidence for
         // this request and for the AI log. ResetSession clears the live frame buffer.
         var sessionFrames = frames.ConvertAll(frame => frame);
-        var analysisFrames = SelectRepresentativeFrames(sessionFrames, 8);
+        var analysisFrames = SelectRepresentativeFrames(sessionFrames, 4);
         ResetSession();
         busy = true;
         try
@@ -78,7 +78,11 @@ public sealed class ActivityMonitor : IDisposable
             if (result.Candidate != null) lastCandidate = DateTime.Now;
             return result;
         }
-        catch { return null; }
+        catch (Exception ex)
+        {
+            // Keep a diagnostic AI log even when the model times out or rejects the payload.
+            return new AiAnalysisResult(context.PromptText, "", null, "AI 请求失败：" + ex.Message, sessionFrames.ConvertAll(Convert.ToBase64String));
+        }
         finally { busy = false; ScheduleNext(); }
     }
     private async Task ConsiderAsync()

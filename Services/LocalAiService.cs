@@ -9,7 +9,7 @@ using DoneBubble.Models;
 namespace DoneBubble.Services;
 public sealed class LocalAiService : IDisposable
 {
-    private readonly HttpClient client = new() { Timeout = TimeSpan.FromSeconds(25) };
+    private readonly HttpClient client = new() { Timeout = TimeSpan.FromSeconds(45) };
     public async Task<ActivityCandidate?> JudgeAsync(ActivityContext context, Settings settings, CancellationToken cancellationToken = default)
     {
         return (await AnalyzeAsync(context, settings, cancellationToken).ConfigureAwait(false)).Candidate;
@@ -30,7 +30,7 @@ public sealed class LocalAiService : IDisposable
     public async Task<AiAnalysisResult> AnalyzeImageAsync(string base64Png, string contextDescription, Settings settings, CancellationToken cancellationToken = default)
     {
         string prompt = $"你是一个极简事务记录助手。根据用户主动提供的完整桌面截图和上下文，判断是否可能完成了一件事。截图是主要证据，上下文文字只作辅助；不要猜测看不到的细节。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。上下文：{contextDescription}。持续阅读、等待、娱乐或无法判断时 done=false。";
-        var message = new object[] { new { type = "text", text = prompt }, new { type = "image_url", image_url = new { url = "data:image/png;base64," + base64Png } } };
+        var message = new object[] { new { type = "text", text = prompt }, new { type = "image_url", image_url = new { url = "data:image/jpeg;base64," + base64Png } } };
         object body = IsDeepSeek(settings) ?
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, thinking = new { type = "disabled" }, response_format = JsonObjectFormat, messages = new[] { new { role = "user", content = message } } } :
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = message } } };
@@ -44,7 +44,7 @@ public sealed class LocalAiService : IDisposable
     {
         string prompt = $"你是一个极简事务记录助手。根据这段时间内按顺序采集的多张完整桌面截图和上下文，判断是否可能完成了一件事。截图是主要证据，比较截图之间的变化，不要把静态等待误判为完成。不要猜测看不到的细节；只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。上下文：{contextDescription}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
         var parts = new List<object> { new { type = "text", text = prompt } };
-        foreach (var image in base64Pngs) parts.Add(new { type = "image_url", image_url = new { url = "data:image/png;base64," + image } });
+        foreach (var image in base64Pngs) parts.Add(new { type = "image_url", image_url = new { url = "data:image/jpeg;base64," + image } });
         object body = IsDeepSeek(settings) ?
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, thinking = new { type = "disabled" }, response_format = JsonObjectFormat, messages = new[] { new { role = "user", content = parts.ToArray() } } } :
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = parts.ToArray() } } };

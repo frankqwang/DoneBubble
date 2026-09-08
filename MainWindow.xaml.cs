@@ -87,20 +87,28 @@ public partial class MainWindow : Window
         }
         if (!expanded && (e.Key == Key.Enter || e.Key == Key.Space)) { Expand(); e.Handled = true; }
     }
-    private async void Category_Click(object sender, RoutedEventArgs e)
+    private void Category_Click(object sender, RoutedEventArgs e)
     {
         if (!expanded || composing) return;
-        AiAnalysisResult? aiResult = null;
-        if (AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null)
+        string category = (string)((Button)sender).Tag;
+        bool summarize = AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null;
+        if (!model.Save(category))
         {
-            model.Error = "正在生成总结…"; ResizeCard();
-            aiResult = await SessionSummaryRequested();
-            if (aiResult?.Candidate != null) model.Draft = aiResult.Candidate.Summary;
-            model.Error = "";
-            if (aiResult == null) { model.Error = "还没有采集到可总结的活动，请先勾选 AI 总结并工作几秒。"; ResizeCard(); return; }
+            Height = CardHeight; Clamp();
+            return;
         }
-        if (model.Save((string)((Button)sender).Tag)) { if (aiResult != null) AiSummaryAccepted?.Invoke(aiResult, model.LastSavedId); Collapse(); }
-        else { Height = CardHeight; Clamp(); }
+        long recordId = model.LastSavedId;
+        Collapse();
+        if (summarize) _ = GenerateSummaryAsync(recordId);
+    }
+    private async Task GenerateSummaryAsync(long recordId)
+    {
+        try
+        {
+            var result = await SessionSummaryRequested!();
+            if (result != null) AiSummaryAccepted?.Invoke(result, recordId);
+        }
+        catch { /* AI is optional; the manual record has already been saved. */ }
     }
     private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 102 : 0) + 24;
     private void ResizeCard()
