@@ -23,7 +23,7 @@ public partial class DebugWindow : Window
         var captured = await CaptureUnderlyingWindowAndImageAsync();
         ShowContext(captured.Context);
         if (captured.Image == null) { Status.Text = "未能截图目标窗口"; return; }
-        ScreenshotView.Source = ToImage(captured.Image); Status.Text = $"已截图 {captured.Image.Length / 1024} KB，正在请求视觉模型…";
+        ScreenshotView.Source = ToImage(captured.Image); Status.Text = $"已截取全屏 {captured.Image.Length / 1024} KB，正在请求视觉模型…";
         try
         {
             var result = await ai.AnalyzeImageAsync(Convert.ToBase64String(captured.Image), captured.Context?.PromptText ?? "未读取到文字上下文", settings);
@@ -90,7 +90,7 @@ public partial class DebugWindow : Window
         if (bubbleWasVisible) bubble!.Hide();
         await Task.Delay(220);
         var context = collector.Capture(TimeSpan.FromMinutes(1));
-        var image = capture.CaptureForeground();
+        var image = capture.CaptureScreen();
         if (bubbleWasVisible) bubble!.Show();
         if (wasVisible) Show();
         return (context, image);
@@ -116,7 +116,7 @@ public partial class DebugWindow : Window
             }
             if (second is 0 or 15 or 30)
             {
-                var image = capture.CaptureForeground();
+                var image = capture.CaptureScreen();
                 if (image != null) images.Add(image);
             }
             if (second < 30) await Task.Delay(TimeSpan.FromSeconds(1));

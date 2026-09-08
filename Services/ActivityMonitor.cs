@@ -97,7 +97,7 @@ public sealed class ActivityMonitor : IDisposable
     {
         try
         {
-            var image = windowCapture.CaptureForeground();
+            var image = windowCapture.CaptureScreen();
             if (image == null) return;
             frames.Add(image);
         }
