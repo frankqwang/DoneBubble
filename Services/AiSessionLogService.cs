@@ -16,10 +16,11 @@ public sealed class AiSessionLogService
     public void Add(AiAnalysisResult result, long? recordId = null)
     {
         var items = Load(); var next = items.Count == 0 ? 1 : items[^1].Id + 1;
-        string summary = result.Candidate?.Summary ?? "AI 未确认完成事项";
+        string summary = result.Candidate?.Summary ?? (string.IsNullOrWhiteSpace(result.Error) ? "AI 未确认完成事项" : result.Error);
         string category = result.Candidate?.SuggestedCategory ?? "未确认";
         double confidence = result.Candidate?.Confidence ?? 0;
-        items.Add(new AiSessionLog(next, recordId, DateTime.Now, summary, category, confidence, result.Prompt, result.RawResponse, result.Images));
+        string raw = string.IsNullOrWhiteSpace(result.RawResponse) ? result.Error ?? "" : result.RawResponse;
+        items.Add(new AiSessionLog(next, recordId, DateTime.Now, summary, category, confidence, result.Prompt, raw, result.Images));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(items, Options)); File.Move(path + ".tmp", path, true);
     }
