@@ -87,12 +87,14 @@ public partial class MainWindow : Window
         if (model.Save((string)((Button)sender).Tag)) Collapse();
         else { Height = CardHeight; Clamp(); }
     }
-    private double CardHeight => (model.HasError ? 330 : 285);
+    private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 82 : 0);
     private void ResizeCard()
     {
         if (expanded && Height != CardHeight) { Height = CardHeight; Clamp(); }
     }
     private void Collapse_Click(object sender, RoutedEventArgs e) => Collapse();
+    private void CandidateAccept_Click(object sender, RoutedEventArgs e) { model.AcceptCandidate(); ResizeCard(); }
+    private void CandidateDismiss_Click(object sender, RoutedEventArgs e) { model.DismissCandidate(); ResizeCard(); }
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
     protected override void OnClosing(CancelEventArgs e)
     {

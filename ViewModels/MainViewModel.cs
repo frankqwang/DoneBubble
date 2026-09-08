@@ -18,6 +18,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         Rest = new RestViewModel(settings ?? new SettingsService());
     }
     public RestViewModel Rest { get; }
+    private ActivityCandidate? candidate;
+    public ActivityCandidate? Candidate { get => candidate; private set { candidate = value; Changed(); Changed(nameof(HasCandidate)); } }
+    public bool HasCandidate => Candidate != null;
     public ObservableCollection<RecordItem> Records { get; } = new();
     public string Draft { get => draft; set { draft = value; Changed(); } }
     public string Error { get => error; set { error = value; Changed(); Changed(nameof(HasError)); } }
@@ -48,6 +51,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
         NotifyCounts();
     }
     public event Action<int>? RecordSaved;
+    public void ShowCandidate(ActivityCandidate value) => Candidate = value;
+    public void DismissCandidate() => Candidate = null;
+    public bool AcceptCandidate() { if (Candidate == null) return false; Draft = Candidate.Summary; var category = Candidate.SuggestedCategory; Candidate = null; return Save(category); }
     public bool Save(string? category = null)
     {
         if (category == null && string.IsNullOrWhiteSpace(Draft)) return false;

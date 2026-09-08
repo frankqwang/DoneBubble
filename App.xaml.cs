@@ -17,6 +17,7 @@ public partial class App : Application
     private readonly SettingsService settings = new();
     private readonly StartupService startup = new();
     private MainViewModel model = null!;
+    private ActivityMonitor? activityMonitor;
     public bool IsExiting { get; private set; }
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,6 +34,8 @@ public partial class App : Application
         bubble = new MainWindow(model, settings); MainWindow = bubble;
         bubble.HistoryRequested += ShowHistory;
         CreateTray();
+        activityMonitor = new ActivityMonitor(settings, new LocalAiService());
+        activityMonitor.CandidateFound += candidate => Dispatcher.BeginInvoke(new Action(() => model.ShowCandidate(candidate)));
         model.Rest.Finished += () => tray?.ShowBalloonTip(4000, "休息时间到",
             "休息倒计时结束了，按自己的节奏继续。", Forms.ToolTipIcon.Info);
         var reminder = new BreakReminderService(settings);
@@ -65,6 +68,9 @@ public partial class App : Application
             catch (Exception ex) { MessageBox.Show("开机启动设置未能完成：" + ex.Message, "DoneBubble"); }
         };
         menu.Items.Add(auto); menu.Items.Add(new Forms.ToolStripSeparator());
+        var ai = new Forms.ToolStripMenuItem("AI 活动识别（本地）") { Checked = settings.Value.AiAssistEnabled, CheckOnClick = true };
+        ai.Click += (_, _) => { settings.Value.AiAssistEnabled = ai.Checked; try { settings.Save(); } catch { } };
+        menu.Items.Add(ai);
         menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); Shutdown(); });
         trayIcon = MakeIcon();
         tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "DoneBubble · 记录已经处理的事", ContextMenuStrip = menu, Visible = true };
@@ -95,6 +101,7 @@ public partial class App : Application
     protected override void OnExit(ExitEventArgs e)
     {
         IsExiting = true; bubble?.Stop();
+        activityMonitor?.Dispose();
         if (tray != null) { tray.Visible = false; tray.ContextMenuStrip?.Dispose(); tray.Dispose(); }
         trayIcon?.Dispose(); instance?.Dispose(); base.OnExit(e);
     }
