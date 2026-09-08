@@ -23,6 +23,7 @@ public sealed class ActivityMonitor : IDisposable
     private DateTime started, lastCandidate = DateTime.MinValue;
     private bool busy, paused;
     private Task<AiAnalysisResult?>? pendingAnalysisTask;
+    private AiAnalysisResult? pendingAnalysisResult;
     private readonly List<string> observations = new();
     public event Action<ActivityCandidate>? CandidateFound;
     public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, Timeout.Infinite); }
@@ -66,6 +67,7 @@ public sealed class ActivityMonitor : IDisposable
     }
     public async Task<AiAnalysisResult?> FlushSessionAsync()
     {
+        if (pendingAnalysisResult != null) { var result = pendingAnalysisResult; pendingAnalysisResult = null; return result; }
         if (pendingAnalysisTask != null) return await pendingAnalysisTask.ConfigureAwait(false);
         if (busy) return new AiAnalysisResult("", "", null, "AI 正在处理另一段活动");
         if (started == default || latestContext == null)
@@ -120,6 +122,7 @@ public sealed class ActivityMonitor : IDisposable
         try
         {
             var result = await task.ConfigureAwait(false);
+            pendingAnalysisResult = result;
             if (result?.Candidate != null)
             {
                 lastCandidate = DateTime.Now;
