@@ -66,12 +66,13 @@ public sealed class ActivityMonitor : IDisposable
         // Reset the live session before awaiting the model, but keep its evidence for
         // this request and for the AI log. ResetSession clears the live frame buffer.
         var sessionFrames = frames.ConvertAll(frame => frame);
+        var analysisFrames = SelectRepresentativeFrames(sessionFrames, 8);
         ResetSession();
         busy = true;
         try
         {
-            var result = sessionFrames.Count > 0
-                ? await ai.AnalyzeImagesAsync(sessionFrames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
+            var result = analysisFrames.Count > 0
+                ? await ai.AnalyzeImagesAsync(analysisFrames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
                 : await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
             if (sessionFrames.Count > 0) result = result with { Images = sessionFrames.ConvertAll(Convert.ToBase64String) };
             if (result.Candidate != null) lastCandidate = DateTime.Now;
@@ -99,9 +100,19 @@ public sealed class ActivityMonitor : IDisposable
             var image = windowCapture.CaptureForeground();
             if (image == null) return;
             frames.Add(image);
-            if (frames.Count > 3) frames.RemoveAt(0);
         }
         catch { }
+    }
+    private static List<byte[]> SelectRepresentativeFrames(List<byte[]> all, int max)
+    {
+        if (all.Count <= max) return all;
+        var selected = new List<byte[]>(max);
+        for (int i = 0; i < max; i++)
+        {
+            int index = (int)Math.Round(i * (all.Count - 1d) / (max - 1));
+            selected.Add(all[index]);
+        }
+        return selected;
     }
     private void AddObservation(CapturedActivityContext? context)
     {
