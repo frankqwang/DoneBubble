@@ -55,7 +55,7 @@ public sealed class ActivityMonitor : IDisposable
         int seconds = minutes switch { <= 1 => 5, <= 5 => 10, <= 15 => 20, <= 30 => 30, _ => 60 };
         try { timer.Change(TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan); } catch (ObjectDisposedException) { }
     }
-    public async Task<ActivityCandidate?> FlushSessionAsync()
+    public async Task<AiAnalysisResult?> FlushSessionAsync()
     {
         if (!settings.Value.AiAssistEnabled || busy || started == default || latestContext == null) return null;
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
@@ -63,9 +63,9 @@ public sealed class ActivityMonitor : IDisposable
         busy = true;
         try
         {
-            var candidate = await ai.JudgeAsync(context, settings.Value).ConfigureAwait(false);
-            if (candidate != null) { lastCandidate = DateTime.Now; return candidate; }
-            return null;
+            var result = await ai.AnalyzeAsync(context, settings.Value).ConfigureAwait(false);
+            if (result.Candidate != null) lastCandidate = DateTime.Now;
+            return result;
         }
         catch { return null; }
         finally { busy = false; ScheduleNext(); }

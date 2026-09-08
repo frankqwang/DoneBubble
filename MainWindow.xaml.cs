@@ -22,7 +22,7 @@ public partial class MainWindow : Window
     private readonly RestWindow restWindow;
     private DateTime date = DateTime.Today;
     public event Action? HistoryRequested;
-    public event Func<Task<ActivityCandidate?>>? SessionSummaryRequested;
+    public event Func<Task<AiAnalysisResult?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
         InitializeComponent(); this.model = model; this.settings = settings; DataContext = model;
@@ -90,8 +90,8 @@ public partial class MainWindow : Window
         if (AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null)
         {
             model.Error = "正在生成总结…"; ResizeCard();
-            var candidate = await SessionSummaryRequested();
-            if (candidate != null) model.Draft = candidate.Summary;
+            var result = await SessionSummaryRequested();
+            if (result?.Candidate != null) model.Draft = result.Candidate.Summary;
             model.Error = "";
         }
         if (model.Save((string)((Button)sender).Tag)) Collapse();

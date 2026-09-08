@@ -15,6 +15,7 @@ public partial class App : Application
     private MainWindow? bubble;
     private HistoryWindow? history;
     private DebugWindow? debug;
+    private AiLogWindow? aiLogs;
     private readonly SettingsService settings = new();
     private readonly StartupService startup = new();
     private MainViewModel model = null!;
@@ -37,7 +38,7 @@ public partial class App : Application
         CreateTray();
         activityMonitor = new ActivityMonitor(settings, new LocalAiService());
         activityMonitor.CandidateFound += candidate => Dispatcher.BeginInvoke(new Action(() => model.ShowCandidate(candidate)));
-        bubble.SessionSummaryRequested += () => activityMonitor.FlushSessionAsync();
+        bubble.SessionSummaryRequested += async () => { var result = await activityMonitor.FlushSessionAsync(); if (result != null) new AiSessionLogService().Add(result); return result; };
         model.Rest.Finished += () => tray?.ShowBalloonTip(4000, "休息时间到",
             "休息倒计时结束了，按自己的节奏继续。", Forms.ToolTipIcon.Info);
         var reminder = new BreakReminderService(settings);
@@ -74,6 +75,7 @@ public partial class App : Application
         ai.Click += (_, _) => { settings.Value.AiAssistEnabled = ai.Checked; try { settings.Save(); } catch { } };
         menu.Items.Add(ai);
         menu.Items.Add("AI 调试窗口", null, (_, _) => { debug ??= new DebugWindow(settings.Value); debug.Closed += (_, _) => debug = null; debug.Show(); debug.Activate(); });
+        menu.Items.Add("AI 总结日志", null, (_, _) => { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); });
         menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); debug?.Close(); Shutdown(); });
         trayIcon = MakeIcon();
         tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "DoneBubble · 记录已经处理的事", ContextMenuStrip = menu, Visible = true };
