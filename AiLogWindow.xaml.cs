@@ -10,6 +10,7 @@ namespace DoneBubble;
 public partial class AiLogWindow : Window, INotifyPropertyChanged
 {
     public ObservableCollection<AiSessionLog> Items { get; } = new();
+    public bool IsEmpty => Items.Count == 0;
     private AiSessionLog? selected;
     public AiSessionLog? Selected { get => selected; set { selected = value; Changed(); } }
     public AiLogWindow() { InitializeComponent(); DataContext = this; foreach (var item in new AiSessionLogService().Load().AsReadOnly()) Items.Add(item); if (Items.Count > 0) { Selected = Items[^1]; Logs.SelectedIndex = Items.Count - 1; } }

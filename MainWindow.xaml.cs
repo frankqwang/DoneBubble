@@ -22,6 +22,8 @@ public partial class MainWindow : Window
     private readonly RestWindow restWindow;
     private DateTime date = DateTime.Today;
     public event Action? HistoryRequested;
+    public event Action? AiLogsRequested;
+    public event Action? AiDebugRequested;
     public event Func<Task<AiAnalysisResult?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
@@ -106,6 +108,8 @@ public partial class MainWindow : Window
     private void CandidateAccept_Click(object sender, RoutedEventArgs e) { model.AcceptCandidate(); ResizeCard(); }
     private void CandidateDismiss_Click(object sender, RoutedEventArgs e) { model.DismissCandidate(); ResizeCard(); }
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
+    private void AiLogs_Click(object sender, RoutedEventArgs e) { Collapse(); AiLogsRequested?.Invoke(); }
+    private void AiDebug_Click(object sender, RoutedEventArgs e) { Collapse(); AiDebugRequested?.Invoke(); }
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing the floating window never terminates the tray application.

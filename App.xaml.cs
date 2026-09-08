@@ -35,6 +35,8 @@ public partial class App : Application
         if (settingsError != null) model.Error = settingsError;
         bubble = new MainWindow(model, settings); MainWindow = bubble;
         bubble.HistoryRequested += ShowHistory;
+        bubble.AiLogsRequested += ShowAiLogs;
+        bubble.AiDebugRequested += ShowAiDebug;
         CreateTray();
         activityMonitor = new ActivityMonitor(settings, new LocalAiService());
         activityMonitor.CandidateFound += candidate => Dispatcher.BeginInvoke(new Action(() => model.ShowCandidate(candidate)));
@@ -74,8 +76,6 @@ public partial class App : Application
         var ai = new Forms.ToolStripMenuItem("AI 活动识别（本地）") { Checked = settings.Value.AiAssistEnabled, CheckOnClick = true };
         ai.Click += (_, _) => { settings.Value.AiAssistEnabled = ai.Checked; try { settings.Save(); } catch { } };
         menu.Items.Add(ai);
-        menu.Items.Add("AI 调试窗口", null, (_, _) => { debug ??= new DebugWindow(settings.Value); debug.Closed += (_, _) => debug = null; debug.Show(); debug.Activate(); });
-        menu.Items.Add("AI 总结日志", null, (_, _) => { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); });
         menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); debug?.Close(); Shutdown(); });
         trayIcon = MakeIcon();
         tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "DoneBubble · 记录已经处理的事", ContextMenuStrip = menu, Visible = true };
@@ -87,6 +87,8 @@ public partial class App : Application
         if (history == null) { history = new HistoryWindow(model); history.Closed += (_, _) => history = null; }
         history.Show(); history.Activate();
     }
+    private void ShowAiLogs() { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); }
+    private void ShowAiDebug() { debug ??= new DebugWindow(settings.Value); debug.Closed += (_, _) => debug = null; debug.Show(); debug.Activate(); }
     private static Icon MakeIcon()
     {
         using var bitmap = new Bitmap(32, 32);
