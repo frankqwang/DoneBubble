@@ -10,9 +10,11 @@ namespace DoneBubble;
 public partial class HistoryWindow : Window
 {
     private readonly MainViewModel model;
+    public event Action? AiLogsRequested;
     public HistoryWindow(MainViewModel model) { InitializeComponent(); this.model = model; DataContext = model; }
     private void Delete_Click(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is RecordItem item) model.Delete(item); }
     private void Refresh_Click(object sender, RoutedEventArgs e) => model.Refresh();
+    private void AiLogs_Click(object sender, RoutedEventArgs e) => AiLogsRequested?.Invoke();
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
     private void Header_Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) { try { DragMove(); } catch (InvalidOperationException) { } } }
     private void Window_Drag(object sender, MouseButtonEventArgs e)

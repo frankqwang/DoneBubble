@@ -11,7 +11,7 @@
     <ListBox.ItemTemplate><DataTemplate><Border Background="#2B3544" CornerRadius="10" Padding="12"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="46"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions><TextBlock Text="{Binding Time}" Foreground="#9EA9B8" FontSize="12" Margin="0,3,0,0"/><TextBlock Grid.Column="1" Text="{Binding DisplayContent}" Foreground="#EDF2F7" TextWrapping="Wrap" Margin="0,0,10,0" FontSize="14"/><Button Grid.Column="2" Content="×" Tag="{Binding}" Click="Delete_Click" Padding="6,0" Background="Transparent" Foreground="#A8B3C1" VerticalAlignment="Top" ToolTip="删除误记录" AutomationProperties.Name="删除这条记录"/></Grid></Border></DataTemplate></ListBox.ItemTemplate>
    </ListBox>
   </Grid>
-  <Grid Grid.Row="3" Margin="0,16,0,0"><TextBlock Text="已经做了的，都算数。" Foreground="#9EA9B8" VerticalAlignment="Center" FontSize="12"/><Button Content="刷新" HorizontalAlignment="Right" Click="Refresh_Click"/></Grid>
+  <Grid Grid.Row="3" Margin="0,16,0,0"><TextBlock Text="已经做了的，都算数。" Foreground="#9EA9B8" VerticalAlignment="Center" FontSize="12"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button Content="AI总结" Margin="0,0,8,0" Click="AiLogs_Click"/><Button Content="刷新" Click="Refresh_Click"/></StackPanel></Grid>
  </Grid>
  </Border>
 </Window>

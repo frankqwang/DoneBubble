@@ -52,13 +52,14 @@ public sealed class MainViewModel : INotifyPropertyChanged
         NotifyCounts();
     }
     public event Action<int>? RecordSaved;
+    public long LastSavedId { get; private set; }
     public void ShowCandidate(ActivityCandidate value) => Candidate = value;
     public void DismissCandidate() => Candidate = null;
     public bool AcceptCandidate() { if (Candidate == null) return false; Draft = Candidate.Summary; var category = Candidate.SuggestedCategory; Candidate = null; return Save(category); }
     public bool Save(string? category = null)
     {
         if (category == null && string.IsNullOrWhiteSpace(Draft)) return false;
-        try { database.Add(Draft, category: category); }
+        try { LastSavedId = database.Add(Draft, category: category); }
         catch (Exception) { Error = "保存失败，输入已保留。请检查磁盘空间或权限后重试。"; return false; }
         Draft = ""; Refresh();
         if (available) RecordSaved?.Invoke(TotalPoints);

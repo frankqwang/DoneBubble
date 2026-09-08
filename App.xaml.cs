@@ -35,12 +35,12 @@ public partial class App : Application
         if (settingsError != null) model.Error = settingsError;
         bubble = new MainWindow(model, settings); MainWindow = bubble;
         bubble.HistoryRequested += ShowHistory;
-        bubble.AiLogsRequested += ShowAiLogs;
         bubble.AiDebugRequested += ShowAiDebug;
+        bubble.AiSummaryAccepted += (result, recordId) => new AiSessionLogService().Add(result, recordId);
         CreateTray();
         activityMonitor = new ActivityMonitor(settings, new LocalAiService());
         activityMonitor.CandidateFound += candidate => Dispatcher.BeginInvoke(new Action(() => model.ShowCandidate(candidate)));
-        bubble.SessionSummaryRequested += async () => { var result = await activityMonitor.FlushSessionAsync(); if (result != null) new AiSessionLogService().Add(result); return result; };
+        bubble.SessionSummaryRequested += () => activityMonitor.FlushSessionAsync();
         model.Rest.Finished += () => tray?.ShowBalloonTip(4000, "休息时间到",
             "休息倒计时结束了，按自己的节奏继续。", Forms.ToolTipIcon.Info);
         var reminder = new BreakReminderService(settings);
@@ -84,7 +84,7 @@ public partial class App : Application
     private void ShowHistory()
     {
         model.Refresh();
-        if (history == null) { history = new HistoryWindow(model); history.Closed += (_, _) => history = null; }
+        if (history == null) { history = new HistoryWindow(model); history.AiLogsRequested += ShowAiLogs; history.Closed += (_, _) => history = null; }
         history.Show(); history.Activate();
     }
     private void ShowAiLogs() { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); }

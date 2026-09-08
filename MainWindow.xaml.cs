@@ -24,6 +24,7 @@ public partial class MainWindow : Window
     public event Action? HistoryRequested;
     public event Action? AiLogsRequested;
     public event Action? AiDebugRequested;
+    public event Action<AiAnalysisResult, long>? AiSummaryAccepted;
     public event Func<Task<AiAnalysisResult?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
@@ -89,17 +90,19 @@ public partial class MainWindow : Window
     private async void Category_Click(object sender, RoutedEventArgs e)
     {
         if (!expanded || composing) return;
+        AiAnalysisResult? aiResult = null;
         if (AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null)
         {
             model.Error = "正在生成总结…"; ResizeCard();
-            var result = await SessionSummaryRequested();
-            if (result?.Candidate != null) model.Draft = result.Candidate.Summary;
+            aiResult = await SessionSummaryRequested();
+            if (aiResult?.Candidate != null) model.Draft = aiResult.Candidate.Summary;
             model.Error = "";
+            if (aiResult == null) { model.Error = "还没有采集到可总结的活动，请先勾选 AI 总结并工作几秒。"; ResizeCard(); return; }
         }
-        if (model.Save((string)((Button)sender).Tag)) Collapse();
+        if (model.Save((string)((Button)sender).Tag)) { if (aiResult != null) AiSummaryAccepted?.Invoke(aiResult, model.LastSavedId); Collapse(); }
         else { Height = CardHeight; Clamp(); }
     }
-    private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 102 : 0);
+    private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 102 : 0) + 24;
     private void ResizeCard()
     {
         if (expanded && Height != CardHeight) { Height = CardHeight; Clamp(); }
@@ -110,6 +113,11 @@ public partial class MainWindow : Window
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
     private void AiLogs_Click(object sender, RoutedEventArgs e) { Collapse(); AiLogsRequested?.Invoke(); }
     private void AiDebug_Click(object sender, RoutedEventArgs e) { Collapse(); AiDebugRequested?.Invoke(); }
+    private void AiSummarizeToggle_Changed(object sender, RoutedEventArgs e)
+    {
+        settings.Value.AiAssistEnabled = AiSummarizeToggle.IsChecked == true;
+        try { settings.Save(); } catch { }
+    }
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing the floating window never terminates the tray application.

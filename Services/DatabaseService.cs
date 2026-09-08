@@ -34,7 +34,7 @@ public sealed class DatabaseService
         catch { connection.Dispose(); throw; }
     }
     // Store local wall-clock time: the recorded day stays the day the user experienced.
-    public void Add(string content, DateTime? createdAt = null, string? category = null)
+    public long Add(string content, DateTime? createdAt = null, string? category = null)
     {
         if (category != null && category != "轻" && category != "中" && category != "重") throw new ArgumentException("分类无效。");
         if (category == null && string.IsNullOrWhiteSpace(content)) throw new ArgumentException("内容不能为空。");
@@ -45,6 +45,8 @@ public sealed class DatabaseService
         command.Parameters.AddWithValue("$category", (object?)category ?? DBNull.Value);
         command.Parameters.AddWithValue("$time", (createdAt ?? DateTime.Now).ToString("yyyy-MM-dd HH:mm:ss.fffffff", CultureInfo.InvariantCulture));
         command.ExecuteNonQuery();
+        command.CommandText = "SELECT last_insert_rowid()";
+        return (long)(command.ExecuteScalar() ?? 0L);
     }
     public List<RecordItem> GetToday(DateTime? now = null)
     {

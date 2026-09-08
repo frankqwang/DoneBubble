@@ -57,7 +57,7 @@ public sealed class ActivityMonitor : IDisposable
     }
     public async Task<AiAnalysisResult?> FlushSessionAsync()
     {
-        if (!settings.Value.AiAssistEnabled || busy || started == default || latestContext == null) return null;
+        if (busy || started == default || latestContext == null) return null;
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
         ResetSession();
         busy = true;
