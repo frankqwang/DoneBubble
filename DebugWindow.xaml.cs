@@ -11,6 +11,7 @@ public partial class DebugWindow : Window
     private readonly LocalAiService ai = new();
     public DebugWindow(Settings settings) { InitializeComponent(); this.settings = settings; }
     private void Collect_Click(object sender, RoutedEventArgs e) { var context = collector.Capture(TimeSpan.FromMinutes(1)); ShowContext(context); Status.Text = context == null ? "未能读取当前窗口" : "已采集，未发送"; }
+    private void Topmost_Changed(object sender, RoutedEventArgs e) => Topmost = TopmostToggle.IsChecked == true;
     private async void Analyze_Click(object sender, RoutedEventArgs e)
     {
         var context = collector.Capture(TimeSpan.FromMinutes(1)); ShowContext(context);
