@@ -81,7 +81,7 @@ public partial class App : Application
     {
         model.Refresh();
         if (history == null) { history = new HistoryWindow(model); history.Closed += (_, _) => history = null; }
-        history.Show(); history.Activate();
+        history.Show(); history.Activate(); history.SelectFirst();
     }
     private void ShowAiLogs() { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); }
     private void ShowAiDebug() { debug ??= new DebugWindow(settings.Value); debug.Closed += (_, _) => debug = null; debug.Show(); debug.Activate(); }
