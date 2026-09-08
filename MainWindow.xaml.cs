@@ -108,7 +108,14 @@ public partial class MainWindow : Window
         if (expanded && Height != CardHeight) { Height = CardHeight; Clamp(); }
     }
     private void Collapse_Click(object sender, RoutedEventArgs e) => Collapse();
-    private void CandidateAccept_Click(object sender, RoutedEventArgs e) { model.AcceptCandidate(); ResizeCard(); }
+    private void CandidateAccept_Click(object sender, RoutedEventArgs e)
+    {
+        var candidate = model.Candidate;
+        if (candidate == null) return;
+        model.Draft = candidate.Summary; model.DismissCandidate();
+        if (model.Save(candidate.SuggestedCategory) && candidate.Analysis != null) AiSummaryAccepted?.Invoke(candidate.Analysis, model.LastSavedId);
+        ResizeCard();
+    }
     private void CandidateDismiss_Click(object sender, RoutedEventArgs e) { model.DismissCandidate(); ResizeCard(); }
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
     private void AiLogs_Click(object sender, RoutedEventArgs e) { Collapse(); AiLogsRequested?.Invoke(); }

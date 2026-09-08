@@ -74,7 +74,7 @@ public sealed class ActivityMonitor : IDisposable
     {
         if (started == default || (DateTime.Now - started).TotalMinutes < 10 || lastCandidate.Date == DateTime.Today && lastCandidate >= started) return;
         busy = true;
-        try { var context = latestContext; if (context != null) context = context with { RecentObservations = string.Join("\n", observations) }; var candidate = context == null ? null : await ai.JudgeAsync(context, settings.Value); if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate); } }
+        try { var context = latestContext; if (context != null) context = context with { RecentObservations = string.Join("\n", observations) }; var result = context == null ? null : await ai.AnalyzeAsync(context, settings.Value); var candidate = result?.Candidate; if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate with { Analysis = result }); } }
         catch { /* AI is optional; an unavailable local server is silent. */ }
         finally { busy = false; }
     }
