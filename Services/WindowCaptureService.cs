@@ -23,4 +23,23 @@ public sealed class WindowCaptureService
         bitmap.Save(stream, encoder, quality);
         return stream.ToArray();
     }
+    public byte[] OptimizeForModel(byte[] image, int maxDimension = 1280)
+    {
+        using var source = new Bitmap(new MemoryStream(image));
+        double scale = Math.Min(1d, maxDimension / (double)Math.Max(source.Width, source.Height));
+        int width = Math.Max(1, (int)Math.Round(source.Width * scale));
+        int height = Math.Max(1, (int)Math.Round(source.Height * scale));
+        using var resized = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+        using (var graphics = Graphics.FromImage(resized))
+        {
+            graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+            graphics.DrawImage(source, 0, 0, width, height);
+        }
+        using var output = new MemoryStream();
+        var encoder = ImageCodecInfo.GetImageEncoders().First(item => item.FormatID == ImageFormat.Jpeg.Guid);
+        using var quality = new EncoderParameters(1);
+        quality.Param[0] = new EncoderParameter(Encoder.Quality, 58L);
+        resized.Save(output, encoder, quality);
+        return output.ToArray();
+    }
 }

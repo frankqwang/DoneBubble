@@ -26,7 +26,7 @@ public partial class DebugWindow : Window
         ScreenshotView.Source = ToImage(captured.Image); Status.Text = $"已截取全屏 {captured.Image.Length / 1024} KB，正在请求视觉模型…";
         try
         {
-            var result = await ai.AnalyzeImageAsync(Convert.ToBase64String(captured.Image), captured.Context?.PromptText ?? "未读取到文字上下文", settings);
+            var result = await ai.AnalyzeImageAsync(Convert.ToBase64String(capture.OptimizeForModel(captured.Image)), captured.Context?.PromptText ?? "未读取到文字上下文", settings);
             PromptBox.Text = result.Prompt; RawBox.Text = result.RawResponse;
             ResultBox.Text = result.Candidate == null ? (result.Error ?? "没有候选") : $"摘要：{result.Candidate.Summary}\n建议分类：{result.Candidate.SuggestedCategory}\n置信度：{result.Candidate.Confidence:0.00}";
             Status.Text = result.Error == null ? "视觉分析完成" : "分析完成，但没有可确认候选：" + result.Error;
@@ -59,7 +59,7 @@ public partial class DebugWindow : Window
         try
         {
             var result = captured.Images.Count > 0
-                ? await ai.AnalyzeImagesAsync(captured.Images.Select(Convert.ToBase64String).ToList(), context.PromptText, settings)
+                ? await ai.AnalyzeImagesAsync(captured.Images.Select(image => Convert.ToBase64String(capture.OptimizeForModel(image))).ToList(), context.PromptText, settings)
                 : await ai.AnalyzeAsync(context, settings);
             PromptBox.Text = result.Prompt; RawBox.Text = result.RawResponse;
             ResultBox.Text = result.Candidate == null ? (result.Error ?? "没有候选") : $"摘要：{result.Candidate.Summary}\n建议分类：{result.Candidate.SuggestedCategory}\n置信度：{result.Candidate.Confidence:0.00}\n活动时长：{result.Candidate.DurationText}";

@@ -66,13 +66,13 @@ public sealed class ActivityMonitor : IDisposable
         // Reset the live session before awaiting the model, but keep its evidence for
         // this request and for the AI log. ResetSession clears the live frame buffer.
         var sessionFrames = frames.ConvertAll(frame => frame);
-        var analysisFrames = SelectRepresentativeFrames(sessionFrames, 4);
+        var analysisFrames = SelectRepresentativeFrames(sessionFrames, 3).ConvertAll(frame => windowCapture.OptimizeForModel(frame));
         ResetSession();
         busy = true;
         try
         {
             var result = analysisFrames.Count > 0
-                ? await ai.AnalyzeImagesAsync(analysisFrames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
+                ? await ai.AnalyzeImagesAsync(analysisFrames.ConvertAll(frame => Convert.ToBase64String(frame)), context.PromptText, settings.Value).ConfigureAwait(false)
                 : await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
             if (sessionFrames.Count > 0) result = result with { Images = sessionFrames.ConvertAll(Convert.ToBase64String) };
             if (result.Candidate != null) lastCandidate = DateTime.Now;
