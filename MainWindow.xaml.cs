@@ -92,6 +92,7 @@ public partial class MainWindow : Window
         if (!expanded || composing) return;
         string category = (string)((Button)sender).Tag;
         bool summarize = AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null;
+        bool hadDraft = !string.IsNullOrWhiteSpace(model.Draft);
         if (!model.Save(category))
         {
             Height = CardHeight; Clamp();
@@ -99,14 +100,18 @@ public partial class MainWindow : Window
         }
         long recordId = model.LastSavedId;
         Collapse();
-        if (summarize) _ = GenerateSummaryAsync(recordId);
+        if (summarize) _ = GenerateSummaryAsync(recordId, hadDraft);
     }
-    private async Task GenerateSummaryAsync(long recordId)
+    private async Task GenerateSummaryAsync(long recordId, bool hadDraft)
     {
         try
         {
             var result = await SessionSummaryRequested!();
-            if (result != null) AiSummaryAccepted?.Invoke(result, recordId);
+            if (result != null)
+            {
+                if (!hadDraft && result.Candidate != null) model.UpdateContent(recordId, result.Candidate.Summary);
+                AiSummaryAccepted?.Invoke(result, recordId);
+            }
         }
         catch { /* AI is optional; the manual record has already been saved. */ }
     }

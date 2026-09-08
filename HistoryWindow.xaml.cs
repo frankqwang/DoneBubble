@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using DoneBubble.Models;
 using DoneBubble.Services;
 using DoneBubble.ViewModels;
@@ -19,14 +20,28 @@ public partial class HistoryWindow : Window, INotifyPropertyChanged
     private readonly AiSessionLogService aiLogs = new();
     private RecordItem? selectedRecord;
     private AiSessionLog? selectedLog;
+    private readonly DispatcherTimer refreshTimer;
     public RecordItem? SelectedRecord { get => selectedRecord; private set { selectedRecord = value; Changed(); } }
     public AiSessionLog? SelectedLog { get => selectedLog; private set { selectedLog = value; Changed(); Changed(nameof(HasSelectedLog)); Changed(nameof(HasNoSelectedLog)); } }
     public bool HasSelectedLog => SelectedLog != null;
     public bool HasNoSelectedLog => SelectedLog == null;
 
-    public HistoryWindow(MainViewModel model) { InitializeComponent(); this.model = model; DataContext = model; }
+    public HistoryWindow(MainViewModel model)
+    {
+        InitializeComponent(); this.model = model; DataContext = model;
+        refreshTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+        refreshTimer.Tick += (_, _) => RefreshIfChanged();
+        Closed += (_, _) => refreshTimer.Stop();
+        refreshTimer.Start();
+    }
     private void Delete_Click(object sender, RoutedEventArgs e) { if (((Button)sender).Tag is RecordItem item) model.Delete(item); }
-    private void Refresh_Click(object sender, RoutedEventArgs e) { model.Refresh(); SelectFirst(); }
+    private void RefreshIfChanged()
+    {
+        long? selectedId = SelectedRecord?.Id;
+        if (!model.RefreshIfChanged()) return;
+        if (selectedId.HasValue) RecordList.SelectedItem = model.Records.FirstOrDefault(item => item.Id == selectedId.Value);
+        SelectFirst();
+    }
     private void Record_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         SelectedRecord = RecordList.SelectedItem as RecordItem;

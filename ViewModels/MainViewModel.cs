@@ -45,11 +45,25 @@ public sealed class MainViewModel : INotifyPropertyChanged
         try
         {
             var items = database.GetToday();
-            Records.Clear(); foreach (var item in items) Records.Add(item);
+            ApplyRecords(items);
             available = true; Error = "";
         }
         catch (Exception) { available = false; Error = "无法读取本地记录，请检查磁盘空间或文件权限后重试。"; }
         NotifyCounts();
+    }
+    public bool RefreshIfChanged()
+    {
+        try
+        {
+            var items = database.GetToday();
+            if (Records.SequenceEqual(items)) return false;
+            ApplyRecords(items); available = true; Error = ""; NotifyCounts(); return true;
+        }
+        catch { return false; }
+    }
+    private void ApplyRecords(System.Collections.Generic.IReadOnlyList<RecordItem> items)
+    {
+        Records.Clear(); foreach (var item in items) Records.Add(item);
     }
     public event Action<int>? RecordSaved;
     public long LastSavedId { get; private set; }
@@ -69,6 +83,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         try { database.Delete(item.Id); Refresh(); }
         catch (Exception) { Error = "删除失败，请稍后重试。"; }
+    }
+    public void UpdateContent(long id, string content)
+    {
+        try { database.UpdateContent(id, content); Refresh(); }
+        catch (Exception) { /* The original record remains valid if an AI backfill fails. */ }
     }
     private void NotifyCounts() { Changed(nameof(BubbleBrush)); Changed(nameof(BubbleHint)); Changed(nameof(TotalPoints)); Changed(nameof(CountLabel)); Changed(nameof(Heading)); Changed(nameof(IsEmpty)); }
     public event PropertyChangedEventHandler? PropertyChanged;

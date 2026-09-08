@@ -69,4 +69,14 @@ public sealed class DatabaseService
         command.Parameters.AddWithValue("$id", id);
         command.ExecuteNonQuery();
     }
+    public void UpdateContent(long id, string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return;
+        using var connection = Open();
+        using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE Records SET Content = $content WHERE Id = $id";
+        command.Parameters.AddWithValue("$id", id);
+        command.Parameters.AddWithValue("$content", content.Trim());
+        command.ExecuteNonQuery();
+    }
 }

@@ -32,7 +32,7 @@
      </StackPanel></ScrollViewer>
     </Border>
    </Grid>
-   <Grid Grid.Row="2" Margin="0,14,0,0"><TextBlock Text="已经做了的，都算数。" Foreground="#9EA9B8" VerticalAlignment="Center" FontSize="12"/><Button Content="刷新" HorizontalAlignment="Right" Click="Refresh_Click"/></Grid>
+   <Grid Grid.Row="2" Margin="0,14,0,0"><TextBlock Text="已经做了的，都算数。" Foreground="#9EA9B8" VerticalAlignment="Center" FontSize="12"/><TextBlock Text="自动更新" HorizontalAlignment="Right" Foreground="#728195" FontSize="12" VerticalAlignment="Center"/></Grid>
   </Grid>
  </Border>
 </Window>
