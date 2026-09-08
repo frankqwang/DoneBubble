@@ -6,6 +6,12 @@ DoneBubble 是一个 Windows 桌面极简事务记录工具，只回答一个问
 
 它不管理任务、截止时间或项目。想到“这件事处理完了”，点击气泡，选择负荷等级，几秒内完成记录。
 
+## 下载和运行
+
+从 [Releases](https://github.com/frankqwang/DoneBubble/releases) 下载 Windows x64 的 `DoneBubble.exe`，放到固定目录后运行。自包含版本不要求预装 .NET，也不需要 WSL。支持 Windows 10 / 11。
+
+当前发布包未签名，首次运行可能出现 Windows SmartScreen 未知发布者提示；确认来源后即可运行。
+
 ## 核心体验
 
 ### 快速记录
@@ -68,12 +74,6 @@ http://127.0.0.1:1234/v1/chat/completions
 ```
 
 模型和接口可在 `%LOCALAPPDATA%\\DoneBubble\\settings.json` 中调整。
-
-## 下载和运行
-
-从 [Releases](https://github.com/frankqwang/DoneBubble/releases) 下载 Windows x64 的 `DoneBubble.exe`，放到固定目录后运行。自包含版本不要求预装 .NET，也不需要 WSL。支持 Windows 10 / 11。
-
-当前发布包未签名，首次运行可能出现 Windows SmartScreen 未知发布者提示。
 
 ## 开发和发布
 
