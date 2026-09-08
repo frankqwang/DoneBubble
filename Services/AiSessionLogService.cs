@@ -21,4 +21,9 @@ public sealed class AiSessionLogService
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(items, Options)); File.Move(path + ".tmp", path, true);
     }
+    public AiSessionLog? FindByRecordId(long recordId)
+    {
+        foreach (var item in Load()) if (item.RecordId == recordId) return item;
+        return null;
+    }
 }

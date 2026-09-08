@@ -59,7 +59,6 @@ public partial class App : Application
     {
         var menu = new Forms.ContextMenuStrip();
         menu.Items.Add("显示 / 隐藏", null, (_, _) => { if (bubble!.IsVisible) { bubble.Collapse(); bubble.Hide(); } else bubble.Reveal(); });
-        menu.Items.Add("今日记录", null, (_, _) => ShowHistory());
         var auto = new Forms.ToolStripMenuItem("开机启动");
         try { auto.Checked = startup.IsEnabled(); settings.Value.AutoStart = auto.Checked; settings.Save(); }
         catch { model.Error = "无法读取或保存开机启动设置。"; }
@@ -73,10 +72,7 @@ public partial class App : Application
             catch (Exception ex) { MessageBox.Show("开机启动设置未能完成：" + ex.Message, "DoneBubble"); }
         };
         menu.Items.Add(auto); menu.Items.Add(new Forms.ToolStripSeparator());
-        var ai = new Forms.ToolStripMenuItem("AI 活动识别（本地）") { Checked = settings.Value.AiAssistEnabled, CheckOnClick = true };
-        ai.Click += (_, _) => { settings.Value.AiAssistEnabled = ai.Checked; try { settings.Save(); } catch { } };
-        menu.Items.Add(ai);
-        menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); debug?.Close(); Shutdown(); });
+        menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); debug?.Close(); aiLogs?.Close(); Shutdown(); });
         trayIcon = MakeIcon();
         tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "DoneBubble · 记录已经处理的事", ContextMenuStrip = menu, Visible = true };
         tray.MouseClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) bubble!.Reveal(); };
@@ -84,7 +80,7 @@ public partial class App : Application
     private void ShowHistory()
     {
         model.Refresh();
-        if (history == null) { history = new HistoryWindow(model); history.AiLogsRequested += ShowAiLogs; history.Closed += (_, _) => history = null; }
+        if (history == null) { history = new HistoryWindow(model); history.Closed += (_, _) => history = null; }
         history.Show(); history.Activate();
     }
     private void ShowAiLogs() { aiLogs ??= new AiLogWindow(); aiLogs.Closed += (_, _) => aiLogs = null; aiLogs.Show(); aiLogs.Activate(); }
