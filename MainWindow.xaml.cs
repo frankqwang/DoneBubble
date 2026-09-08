@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     public event Func<Task<AiAnalysisResult?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
-        InitializeComponent(); this.model = model; this.settings = settings; DataContext = model;
+        this.model = model; this.settings = settings; InitializeComponent(); AiSummarizeToggle.IsChecked = true; DataContext = model;
         restWindow = new RestWindow(model.Rest, settings);
         Left = double.IsFinite(settings.Value.WindowX) ? settings.Value.WindowX : 80;
         Top = double.IsFinite(settings.Value.WindowY) ? settings.Value.WindowY : 160;
