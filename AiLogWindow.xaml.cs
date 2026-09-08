@@ -21,8 +21,8 @@ public partial class AiLogWindow : Window, INotifyPropertyChanged
         current.Show(); current.Activate();
     }
     public AiLogWindow() : this(null) { }
-    public AiLogWindow(AiSessionLog? single) { InitializeComponent(); DataContext = this; if (single != null) Items.Add(single); else foreach (var item in new AiSessionLogService().Load().AsReadOnly()) Items.Add(item); if (Items.Count > 0) { Selected = Items[^1]; Logs.SelectedIndex = Items.Count - 1; } }
-    private void SetLog(AiSessionLog log) { Items.Clear(); Items.Add(log); Selected = log; Logs.SelectedIndex = 0; }
+    public AiLogWindow(AiSessionLog? single) { InitializeComponent(); DataContext = this; if (single != null) Items.Add(single); else foreach (var item in new AiSessionLogService().Load().AsReadOnly()) Items.Add(item); if (Items.Count > 0) Selected = Items[^1]; }
+    private void SetLog(AiSessionLog log) { Items.Clear(); Items.Add(log); Selected = log; }
     private void Close_Click(object sender, RoutedEventArgs e) => Hide();
     private void Drag_MouseDown(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed && e.OriginalSource is not System.Windows.Controls.Button) { try { DragMove(); } catch (InvalidOperationException) { } } }
     public event PropertyChangedEventHandler? PropertyChanged;
