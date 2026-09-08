@@ -19,8 +19,9 @@ public sealed class MainViewModel : INotifyPropertyChanged
     }
     public RestViewModel Rest { get; }
     private ActivityCandidate? candidate;
-    public ActivityCandidate? Candidate { get => candidate; private set { candidate = value; Changed(); Changed(nameof(HasCandidate)); } }
+    public ActivityCandidate? Candidate { get => candidate; private set { candidate = value; Changed(); Changed(nameof(HasCandidate)); Changed(nameof(CandidateDetails)); } }
     public bool HasCandidate => Candidate != null;
+    public string CandidateDetails => Candidate == null ? "" : $"建议：{Candidate.SuggestedCategory} · {Candidate.DurationText} · {Candidate.ConfidenceText}";
     public ObservableCollection<RecordItem> Records { get; } = new();
     public string Draft { get => draft; set { draft = value; Changed(); } }
     public string Error { get => error; set { error = value; Changed(); Changed(nameof(HasError)); } }

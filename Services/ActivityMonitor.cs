@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -17,6 +18,7 @@ public sealed class ActivityMonitor : IDisposable
     private CapturedActivityContext? latestContext;
     private DateTime started, lastCandidate = DateTime.MinValue;
     private bool busy;
+    private readonly List<string> observations = new();
     public event Action<ActivityCandidate>? CandidateFound;
     public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, 15000); }
     private async void Tick(object? state)
@@ -26,20 +28,28 @@ public sealed class ActivityMonitor : IDisposable
         if (string.IsNullOrWhiteSpace(nextApplication) || nextApplication.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return;
         if (!nextApplication.Equals(application, StringComparison.OrdinalIgnoreCase) || !SameTopic(title, nextTitle))
         {
-            await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null;
+            await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null; observations.Clear();
         }
         else if (started == default) started = DateTime.Now;
-        else latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
+        else
+        {
+            latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
+            if (latestContext != null)
+            {
+                string sample = $"{latestContext.CapturedAt:HH:mm:ss}｜{latestContext.Application}｜{latestContext.WindowTitle}｜焦点：{latestContext.FocusedControl ?? "未知"}";
+                if (!observations.Contains(sample)) { observations.Add(sample); if (observations.Count > 8) observations.RemoveAt(0); }
+            }
+        }
     }
     private async Task ConsiderAsync()
     {
         if (started == default || (DateTime.Now - started).TotalMinutes < 10 || lastCandidate.Date == DateTime.Today && lastCandidate >= started) return;
         busy = true;
-        try { var context = latestContext; var candidate = context == null ? null : await ai.JudgeAsync(context, settings.Value); if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate); } }
+        try { var context = latestContext; if (context != null) context = context with { RecentObservations = string.Join("\n", observations) }; var candidate = context == null ? null : await ai.JudgeAsync(context, settings.Value); if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate); } }
         catch { /* AI is optional; an unavailable local server is silent. */ }
         finally { busy = false; }
     }
-    private void ResetIfIdle() { if (GetIdleSeconds() > 90) { application = title = ""; started = default; latestContext = null; } }
+    private void ResetIfIdle() { if (GetIdleSeconds() > 90) { application = title = ""; started = default; latestContext = null; observations.Clear(); } }
     private static bool SameTopic(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase) || (a.Length > 0 && b.Contains(a, StringComparison.OrdinalIgnoreCase));
     private static string GetForegroundApplication() { IntPtr handle = GetForegroundWindow(); GetWindowThreadProcessId(handle, out uint id); try { using var process = Process.GetProcessById((int)id); return process.ProcessName; } catch { return ""; } }
     private static string GetForegroundTitle() { var buffer = new StringBuilder(512); GetWindowText(GetForegroundWindow(), buffer, buffer.Capacity); return buffer.ToString().Trim(); }

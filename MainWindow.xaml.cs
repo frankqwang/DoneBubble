@@ -87,7 +87,7 @@ public partial class MainWindow : Window
         if (model.Save((string)((Button)sender).Tag)) Collapse();
         else { Height = CardHeight; Clamp(); }
     }
-    private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 82 : 0);
+    private double CardHeight => (model.HasError ? 330 : 285) + (model.HasCandidate ? 102 : 0);
     private void ResizeCard()
     {
         if (expanded && Height != CardHeight) { Height = CardHeight; Clamp(); }
