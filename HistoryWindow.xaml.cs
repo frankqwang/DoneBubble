@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -22,9 +23,24 @@ public partial class HistoryWindow : Window, INotifyPropertyChanged
     private AiSessionLog? selectedLog;
     private readonly DispatcherTimer refreshTimer;
     public RecordItem? SelectedRecord { get => selectedRecord; private set { selectedRecord = value; Changed(); } }
-    public AiSessionLog? SelectedLog { get => selectedLog; private set { selectedLog = value; Changed(); Changed(nameof(HasSelectedLog)); Changed(nameof(HasNoSelectedLog)); } }
+    public AiSessionLog? SelectedLog { get => selectedLog; private set { selectedLog = value; Changed(); Changed(nameof(HasSelectedLog)); Changed(nameof(HasNoSelectedLog)); Changed(nameof(DisplayedFrames)); Changed(nameof(FrameHint)); } }
     public bool HasSelectedLog => SelectedLog != null;
     public bool HasNoSelectedLog => SelectedLog == null;
+    // Keep the full frame archive in ai-sessions.json, but only decode a small
+    // representative set in the WPF visual tree. This keeps scrolling and
+    // window dragging responsive for long sessions.
+    public IReadOnlyList<string> DisplayedFrames
+    {
+        get
+        {
+            var frames = SelectedLog?.Frames;
+            if (frames == null || frames.Count <= 12) return frames ?? Array.Empty<string>();
+            return Enumerable.Range(0, 12).Select(i => frames[(int)Math.Round(i * (frames.Count - 1d) / 11d)]).ToArray();
+        }
+    }
+    public string FrameHint => SelectedLog?.Frames is { Count: > 12 } frames
+        ? $"显示 12 张代表图，完整证据已保存在本地日志（共 {frames.Count} 张）"
+        : SelectedLog?.Frames is { Count: > 0 } framesWithImages ? $"共 {framesWithImages.Count} 张" : "本次没有截图证据";
 
     public HistoryWindow(MainViewModel model)
     {

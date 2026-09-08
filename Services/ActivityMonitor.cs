@@ -16,10 +16,12 @@ public sealed class ActivityMonitor : IDisposable
     private readonly ActivityContextCollector collector = new();
     private readonly WindowCaptureService windowCapture = new();
     private readonly List<byte[]> frames = new();
+    private byte[]? lastKeptFrame;
+    private DateTime lastFrameKeptAt;
     private string application = "", title = "";
     private CapturedActivityContext? latestContext;
     private DateTime started, lastCandidate = DateTime.MinValue;
-    private bool busy;
+    private bool busy, paused;
     private readonly List<string> observations = new();
     public event Action<ActivityCandidate>? CandidateFound;
     public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, Timeout.Infinite); }
@@ -27,9 +29,11 @@ public sealed class ActivityMonitor : IDisposable
     {
         try
         {
-            if (busy || !settings.Value.AiAssistEnabled || GetIdleSeconds() > 90) { ResetIfIdle(); return; }
+            if (busy || !settings.Value.AiAssistEnabled) return;
+            if (GetIdleSeconds() > 90) { MarkIdle(); return; }
             string nextApplication = GetForegroundApplication(); string nextTitle = GetForegroundTitle();
             if (string.IsNullOrWhiteSpace(nextApplication) || nextApplication.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return;
+            if (paused) { ResetSession(); paused = false; }
             if (!nextApplication.Equals(application, StringComparison.OrdinalIgnoreCase) || !SameTopic(title, nextTitle))
             {
                 await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null; observations.Clear();
@@ -61,7 +65,9 @@ public sealed class ActivityMonitor : IDisposable
     }
     public async Task<AiAnalysisResult?> FlushSessionAsync()
     {
-        if (busy || started == default || latestContext == null) return null;
+        if (busy) return new AiAnalysisResult("", "", null, "AI 正在处理另一段活动");
+        if (started == default || latestContext == null)
+            return new AiAnalysisResult("", "", null, "没有可总结的活动 session");
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
         // Reset the live session before awaiting the model, but keep its evidence for
         // this request and for the AI log. ResetSession clears the live frame buffer.
@@ -95,17 +101,41 @@ public sealed class ActivityMonitor : IDisposable
         catch { /* AI is optional; an unavailable local server is silent. */ }
         finally { busy = false; }
     }
-    private void ResetIfIdle() { if (GetIdleSeconds() > 90) ResetSession(); }
-    private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); frames.Clear(); }
+    private void MarkIdle() { if (started != default) paused = true; }
+    private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); frames.Clear(); lastKeptFrame = null; lastFrameKeptAt = default; paused = false; }
     private void CaptureFrame()
     {
         try
         {
             var image = windowCapture.CaptureScreen();
             if (image == null) return;
+            // A timer tick is not necessarily a meaningful change. Keep every
+            // distinct view, but suppress near-identical frames so a quiet
+            // session does not create hundreds of megabytes of evidence.
+            if (lastKeptFrame != null && DateTime.Now - lastFrameKeptAt < TimeSpan.FromMinutes(2) && !IsMeaningfullyDifferent(lastKeptFrame, image)) return;
             frames.Add(image);
+            lastKeptFrame = image;
+            lastFrameKeptAt = DateTime.Now;
         }
         catch { }
+    }
+    private static bool IsMeaningfullyDifferent(byte[] previous, byte[] current)
+    {
+        try
+        {
+            using var a = new System.Drawing.Bitmap(new System.IO.MemoryStream(previous));
+            using var b = new System.Drawing.Bitmap(new System.IO.MemoryStream(current));
+            const int width = 32, height = 18;
+            double difference = 0;
+            for (int y = 0; y < height; y++) for (int x = 0; x < width; x++)
+            {
+                var pa = a.GetPixel(x * a.Width / width, y * a.Height / height);
+                var pb = b.GetPixel(x * b.Width / width, y * b.Height / height);
+                difference += (Math.Abs(pa.R - pb.R) + Math.Abs(pa.G - pb.G) + Math.Abs(pa.B - pb.B)) / (255d * 3d);
+            }
+            return difference / (width * height) > 0.018;
+        }
+        catch { return true; }
     }
     private static List<byte[]> SelectRepresentativeFrames(List<byte[]> all, int max)
     {
