@@ -63,6 +63,12 @@ public partial class MainWindow : Window
         if (captured && !dragging) Expand();
     }
     public void Reveal() { Show(); Collapse(); Clamp(); Activate(); restWindow.Reveal(Left + 82, Top); }
+    public void ShowCandidate(ActivityCandidate candidate)
+    {
+        model.ShowCandidate(candidate);
+        Show();
+        Expand();
+    }
     private void Expand()
     {
         model.Refresh(); anchorX = Left; anchorY = Top; expanded = true;

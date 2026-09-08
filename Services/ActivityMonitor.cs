@@ -22,6 +22,7 @@ public sealed class ActivityMonitor : IDisposable
     private CapturedActivityContext? latestContext;
     private DateTime started, lastCandidate = DateTime.MinValue;
     private bool busy, paused;
+    private Task<AiAnalysisResult?>? pendingAnalysisTask;
     private readonly List<string> observations = new();
     public event Action<ActivityCandidate>? CandidateFound;
     public ActivityMonitor(SettingsService settings, LocalAiService ai) { this.settings = settings; this.ai = ai; timer = new(Tick, null, 5000, Timeout.Infinite); }
@@ -65,9 +66,15 @@ public sealed class ActivityMonitor : IDisposable
     }
     public async Task<AiAnalysisResult?> FlushSessionAsync()
     {
+        if (pendingAnalysisTask != null) return await pendingAnalysisTask.ConfigureAwait(false);
         if (busy) return new AiAnalysisResult("", "", null, "AI 正在处理另一段活动");
         if (started == default || latestContext == null)
             return new AiAnalysisResult("", "", null, "没有可总结的活动 session");
+        return await AnalyzeCurrentSessionAsync().ConfigureAwait(false);
+    }
+    private async Task<AiAnalysisResult?> AnalyzeCurrentSessionAsync()
+    {
+        if (started == default || latestContext == null) return new AiAnalysisResult("", "", null, "没有可总结的活动 session");
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
         // Reset the live session before awaiting the model, but keep its evidence for
         // this request and for the AI log. ResetSession clears the live frame buffer.
@@ -101,7 +108,27 @@ public sealed class ActivityMonitor : IDisposable
         catch { /* AI is optional; an unavailable local server is silent. */ }
         finally { busy = false; }
     }
-    private void MarkIdle() { if (started != default) paused = true; }
+    private void MarkIdle()
+    {
+        if (started == default || paused || pendingAnalysisTask != null) return;
+        paused = true;
+        pendingAnalysisTask = AnalyzeCurrentSessionAsync();
+        _ = CompleteIdleAnalysisAsync(pendingAnalysisTask);
+    }
+    private async Task CompleteIdleAnalysisAsync(Task<AiAnalysisResult?> task)
+    {
+        try
+        {
+            var result = await task.ConfigureAwait(false);
+            if (result?.Candidate != null)
+            {
+                lastCandidate = DateTime.Now;
+                CandidateFound?.Invoke(result.Candidate with { Analysis = result });
+            }
+        }
+        catch { /* The manual record path will show a diagnostic if it is used. */ }
+        finally { pendingAnalysisTask = null; }
+    }
     private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); frames.Clear(); lastKeptFrame = null; lastFrameKeptAt = default; paused = false; }
     private void CaptureFrame()
     {
