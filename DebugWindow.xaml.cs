@@ -17,6 +17,7 @@ public partial class DebugWindow : Window
     public DebugWindow(Settings settings) { InitializeComponent(); this.settings = settings; }
     private async void Collect_Click(object sender, RoutedEventArgs e) { var context = await CaptureUnderlyingWindowAsync(); ShowContext(context); Status.Text = context == null ? "未能读取目标窗口" : "已采集，未发送"; }
     private void Topmost_Changed(object sender, RoutedEventArgs e) => Topmost = TopmostToggle.IsChecked == true;
+    private void Window_KeyDown(object sender, System.Windows.Input.KeyEventArgs e) { if (e.Key == System.Windows.Input.Key.Escape) { Hide(); e.Handled = true; } }
     private async void AnalyzeImage_Click(object sender, RoutedEventArgs e)
     {
         var captured = await CaptureUnderlyingWindowAndImageAsync();

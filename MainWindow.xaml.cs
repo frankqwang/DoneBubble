@@ -15,7 +15,7 @@ public partial class MainWindow : Window
 {
     private readonly SettingsService settings;
     private readonly MainViewModel model;
-    private bool expanded, dragging, composing;
+    private bool expanded, dragging, composing, viewReady;
     private Point down;
     private double anchorX, anchorY;
     private readonly DispatcherTimer timer;
@@ -28,7 +28,7 @@ public partial class MainWindow : Window
     public event Func<Task<AiAnalysisResult?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
-        this.model = model; this.settings = settings; InitializeComponent(); AiSummarizeToggle.IsChecked = true; DataContext = model;
+        this.model = model; this.settings = settings; InitializeComponent(); AiSummarizeToggle.IsChecked = true; DataContext = model; viewReady = true;
         restWindow = new RestWindow(model.Rest, settings);
         Left = double.IsFinite(settings.Value.WindowX) ? settings.Value.WindowX : 80;
         Top = double.IsFinite(settings.Value.WindowY) ? settings.Value.WindowY : 160;
@@ -122,6 +122,7 @@ public partial class MainWindow : Window
     private void AiDebug_Click(object sender, RoutedEventArgs e) { Collapse(); AiDebugRequested?.Invoke(); }
     private void AiSummarizeToggle_Changed(object sender, RoutedEventArgs e)
     {
+        if (!viewReady) return;
         settings.Value.AiAssistEnabled = AiSummarizeToggle.IsChecked == true;
         try { settings.Save(); } catch { }
     }
