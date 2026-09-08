@@ -19,6 +19,7 @@ public sealed class ActivityContextCollector
         try
         {
             using var process = Process.GetProcessById((int)processId);
+            if (process.ProcessName.Equals("DoneBubble", StringComparison.OrdinalIgnoreCase)) return null;
             var focused = ReadFocusedText();
             return new CapturedActivityContext(process.ProcessName, (int)processId, NativeMethods.WindowTitle(handle), NativeMethods.WindowClass(handle), TryPath(process), focused.Description, Redact(focused.Text), duration, DateTime.Now);
         }
