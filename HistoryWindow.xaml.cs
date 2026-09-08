@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using DoneBubble.Models;
 using DoneBubble.Services;
@@ -87,6 +88,13 @@ public partial class HistoryWindow : Window, INotifyPropertyChanged
         return false;
     }
     private void Window_KeyDown(object sender, KeyEventArgs e) { if (e.Key == Key.Escape) { Close(); e.Handled = true; } }
+    private void Frame_Click(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not Image { Source: BitmapSource source }) return;
+        var preview = new ImagePreviewWindow(source) { Owner = this };
+        preview.ShowDialog();
+        e.Handled = true;
+    }
     public event PropertyChangedEventHandler? PropertyChanged;
     private void Changed([CallerMemberName] string? name = null) => PropertyChanged?.Invoke(this, new(name));
 }
