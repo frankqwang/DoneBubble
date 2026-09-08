@@ -14,6 +14,7 @@ public partial class App : Application
     private Icon? trayIcon;
     private MainWindow? bubble;
     private HistoryWindow? history;
+    private DebugWindow? debug;
     private readonly SettingsService settings = new();
     private readonly StartupService startup = new();
     private MainViewModel model = null!;
@@ -71,7 +72,8 @@ public partial class App : Application
         var ai = new Forms.ToolStripMenuItem("AI 活动识别（本地）") { Checked = settings.Value.AiAssistEnabled, CheckOnClick = true };
         ai.Click += (_, _) => { settings.Value.AiAssistEnabled = ai.Checked; try { settings.Save(); } catch { } };
         menu.Items.Add(ai);
-        menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); Shutdown(); });
+        menu.Items.Add("AI 调试窗口", null, (_, _) => { debug ??= new DebugWindow(settings.Value); debug.Closed += (_, _) => debug = null; debug.Show(); debug.Activate(); });
+        menu.Items.Add("退出", null, (_, _) => { IsExiting = true; bubble!.Stop(); history?.Close(); debug?.Close(); Shutdown(); });
         trayIcon = MakeIcon();
         tray = new Forms.NotifyIcon { Icon = trayIcon, Text = "DoneBubble · 记录已经处理的事", ContextMenuStrip = menu, Visible = true };
         tray.MouseClick += (_, args) => { if (args.Button == Forms.MouseButtons.Left) bubble!.Reveal(); };

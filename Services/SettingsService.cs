@@ -16,7 +16,7 @@ public sealed class Settings
     public bool AutoStart { get; set; }
     public bool AiAssistEnabled { get; set; }
     public string AiEndpoint { get; set; } = "http://127.0.0.1:1234/v1/chat/completions";
-    public string AiModel { get; set; } = "qwen3-4b";
+    public string AiModel { get; set; } = "qwen3.5-4b";
 }
 public sealed class SettingsService
 {
