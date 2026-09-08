@@ -27,7 +27,7 @@ public sealed class RestViewModel : INotifyPropertyChanged
     {
         // Further reminders during an active break do not reset the user's timer.
         if (IsResting) return;
-        settings.Value.RestEndsAtUtc = now().AddMinutes(15);
+        settings.Value.RestEndsAtUtc = now().AddMinutes(10);
         Persist(); Changed();
     }
     public void Adjust(int minutes)
