@@ -32,15 +32,16 @@ public sealed class ActivityMonitor : IDisposable
             {
                 await ConsiderAsync(); application = nextApplication; title = nextTitle; started = DateTime.Now; latestContext = null; observations.Clear();
             }
-            else if (started == default) started = DateTime.Now;
+            else if (started == default)
+            {
+                started = DateTime.Now;
+                latestContext = collector.Capture(TimeSpan.Zero) ?? latestContext;
+                AddObservation(latestContext);
+            }
             else
             {
                 latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
-                if (latestContext != null)
-                {
-                    string sample = $"{latestContext.CapturedAt:HH:mm:ss}｜{latestContext.Application}｜{latestContext.WindowTitle}｜焦点：{latestContext.FocusedControl ?? "未知"}";
-                    if (!observations.Contains(sample)) { observations.Add(sample); if (observations.Count > 8) observations.RemoveAt(0); }
-                }
+                AddObservation(latestContext);
             }
         }
         finally
@@ -54,18 +55,19 @@ public sealed class ActivityMonitor : IDisposable
         int seconds = minutes switch { <= 1 => 5, <= 5 => 10, <= 15 => 20, <= 30 => 30, _ => 60 };
         try { timer.Change(TimeSpan.FromSeconds(seconds), Timeout.InfiniteTimeSpan); } catch (ObjectDisposedException) { }
     }
-    public async Task FlushSessionAsync()
+    public async Task<ActivityCandidate?> FlushSessionAsync()
     {
-        if (busy || !settings.Value.AiAssistEnabled || started == default || latestContext == null) return;
+        if (!settings.Value.AiAssistEnabled || busy || started == default || latestContext == null) return null;
         var context = latestContext with { RecentObservations = string.Join("\n", observations) };
         ResetSession();
         busy = true;
         try
         {
             var candidate = await ai.JudgeAsync(context, settings.Value).ConfigureAwait(false);
-            if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate); }
+            if (candidate != null) { lastCandidate = DateTime.Now; return candidate; }
+            return null;
         }
-        catch { /* AI is optional; a failed manual flush should not interrupt recording. */ }
+        catch { return null; }
         finally { busy = false; ScheduleNext(); }
     }
     private async Task ConsiderAsync()
@@ -78,6 +80,12 @@ public sealed class ActivityMonitor : IDisposable
     }
     private void ResetIfIdle() { if (GetIdleSeconds() > 90) ResetSession(); }
     private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); }
+    private void AddObservation(CapturedActivityContext? context)
+    {
+        if (context == null) return;
+        string sample = $"{context.CapturedAt:HH:mm:ss}｜{context.Application}｜{context.WindowTitle}｜焦点：{context.FocusedControl ?? "未知"}";
+        if (!observations.Contains(sample)) { observations.Add(sample); if (observations.Count > 8) observations.RemoveAt(0); }
+    }
     private static bool SameTopic(string a, string b) => string.Equals(a, b, StringComparison.OrdinalIgnoreCase) || (a.Length > 0 && b.Contains(a, StringComparison.OrdinalIgnoreCase));
     private static string GetForegroundApplication() { IntPtr handle = GetForegroundWindow(); GetWindowThreadProcessId(handle, out uint id); try { using var process = Process.GetProcessById((int)id); return process.ProcessName; } catch { return ""; } }
     private static string GetForegroundTitle() { var buffer = new StringBuilder(512); GetWindowText(GetForegroundWindow(), buffer, buffer.Capacity); return buffer.ToString().Trim(); }

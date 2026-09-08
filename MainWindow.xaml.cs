@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Windows.Controls;
 using System.Runtime.InteropServices;
@@ -7,6 +8,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Threading;
 using DoneBubble.Services;
+using DoneBubble.Models;
 using DoneBubble.ViewModels;
 namespace DoneBubble;
 public partial class MainWindow : Window
@@ -20,7 +22,7 @@ public partial class MainWindow : Window
     private readonly RestWindow restWindow;
     private DateTime date = DateTime.Today;
     public event Action? HistoryRequested;
-    public event Action? BubbleClicked;
+    public event Func<Task<ActivityCandidate?>>? SessionSummaryRequested;
     public MainWindow(MainViewModel model, SettingsService settings)
     {
         InitializeComponent(); this.model = model; this.settings = settings; DataContext = model;
@@ -82,9 +84,16 @@ public partial class MainWindow : Window
         }
         if (!expanded && (e.Key == Key.Enter || e.Key == Key.Space)) { Expand(); e.Handled = true; }
     }
-    private void Category_Click(object sender, RoutedEventArgs e)
+    private async void Category_Click(object sender, RoutedEventArgs e)
     {
         if (!expanded || composing) return;
+        if (AiSummarizeToggle.IsChecked == true && SessionSummaryRequested != null)
+        {
+            model.Error = "正在生成总结…"; ResizeCard();
+            var candidate = await SessionSummaryRequested();
+            if (candidate != null) model.Draft = candidate.Summary;
+            model.Error = "";
+        }
         if (model.Save((string)((Button)sender).Tag)) Collapse();
         else { Height = CardHeight; Clamp(); }
     }
@@ -97,7 +106,6 @@ public partial class MainWindow : Window
     private void CandidateAccept_Click(object sender, RoutedEventArgs e) { model.AcceptCandidate(); ResizeCard(); }
     private void CandidateDismiss_Click(object sender, RoutedEventArgs e) { model.DismissCandidate(); ResizeCard(); }
     private void History_Click(object sender, RoutedEventArgs e) { Collapse(); HistoryRequested?.Invoke(); }
-    private void SessionSummary_Click(object sender, RoutedEventArgs e) { BubbleClicked?.Invoke(); }
     protected override void OnClosing(CancelEventArgs e)
     {
         // Closing the floating window never terminates the tray application.

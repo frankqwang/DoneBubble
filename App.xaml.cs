@@ -37,7 +37,7 @@ public partial class App : Application
         CreateTray();
         activityMonitor = new ActivityMonitor(settings, new LocalAiService());
         activityMonitor.CandidateFound += candidate => Dispatcher.BeginInvoke(new Action(() => model.ShowCandidate(candidate)));
-        bubble.BubbleClicked += () => _ = activityMonitor.FlushSessionAsync();
+        bubble.SessionSummaryRequested += () => activityMonitor.FlushSessionAsync();
         model.Rest.Finished += () => tray?.ShowBalloonTip(4000, "休息时间到",
             "休息倒计时结束了，按自己的节奏继续。", Forms.ToolTipIcon.Info);
         var reminder = new BreakReminderService(settings);
