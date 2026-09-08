@@ -79,7 +79,9 @@ public sealed class ActivityMonitor : IDisposable
     }
     private async Task ConsiderAsync()
     {
-        if (started == default || (DateTime.Now - started).TotalMinutes < 10 || lastCandidate.Date == DateTime.Today && lastCandidate >= started) return;
+        // Three minutes is long enough to filter out accidental window switches while
+        // still catching short replies, reviews, and focused troubleshooting sessions.
+        if (started == default || (DateTime.Now - started).TotalMinutes < 3 || lastCandidate.Date == DateTime.Today && lastCandidate >= started) return;
         busy = true;
         try { var context = latestContext; if (context != null) context = context with { RecentObservations = string.Join("\n", observations) }; var result = context == null ? null : await ai.AnalyzeAsync(context, settings.Value); var candidate = result?.Candidate; if (candidate != null) { lastCandidate = DateTime.Now; CandidateFound?.Invoke(candidate with { Analysis = result }); } }
         catch { /* AI is optional; an unavailable local server is silent. */ }
