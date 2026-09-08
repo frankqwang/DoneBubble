@@ -19,7 +19,7 @@ public partial class HistoryWindow : Window
         if (((Button)sender).Tag is not RecordItem item) return;
         var log = new AiSessionLogService().FindByRecordId(item.Id);
         if (log == null) { MessageBox.Show("这条记录没有关联的 AI 总结。请在记录时勾选“AI 总结”。", "DoneBubble"); return; }
-        new AiLogWindow(log).Show();
+        AiLogWindow.ShowLog(log);
     }
     private void Close_Click(object sender, RoutedEventArgs e) => Close();
     private void Header_Drag(object sender, MouseButtonEventArgs e) { if (e.LeftButton == MouseButtonState.Pressed) { try { DragMove(); } catch (InvalidOperationException) { } } }

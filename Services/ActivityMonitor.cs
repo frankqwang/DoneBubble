@@ -14,6 +14,8 @@ public sealed class ActivityMonitor : IDisposable
     private readonly LocalAiService ai;
     private readonly Timer timer;
     private readonly ActivityContextCollector collector = new();
+    private readonly WindowCaptureService windowCapture = new();
+    private readonly List<byte[]> frames = new();
     private string application = "", title = "";
     private CapturedActivityContext? latestContext;
     private DateTime started, lastCandidate = DateTime.MinValue;
@@ -37,11 +39,13 @@ public sealed class ActivityMonitor : IDisposable
                 started = DateTime.Now;
                 latestContext = collector.Capture(TimeSpan.Zero) ?? latestContext;
                 AddObservation(latestContext);
+                CaptureFrame();
             }
             else
             {
                 latestContext = collector.Capture(DateTime.Now - started) ?? latestContext;
                 AddObservation(latestContext);
+                CaptureFrame();
             }
         }
         finally
@@ -63,7 +67,10 @@ public sealed class ActivityMonitor : IDisposable
         busy = true;
         try
         {
-            var result = await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
+            var result = frames.Count > 0
+                ? await ai.AnalyzeImagesAsync(frames.ConvertAll(Convert.ToBase64String), context.PromptText, settings.Value).ConfigureAwait(false)
+                : await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
+            if (frames.Count > 0) result = result with { Images = frames.ConvertAll(Convert.ToBase64String) };
             if (result.Candidate != null) lastCandidate = DateTime.Now;
             return result;
         }
@@ -79,7 +86,18 @@ public sealed class ActivityMonitor : IDisposable
         finally { busy = false; }
     }
     private void ResetIfIdle() { if (GetIdleSeconds() > 90) ResetSession(); }
-    private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); }
+    private void ResetSession() { application = title = ""; started = default; latestContext = null; observations.Clear(); frames.Clear(); }
+    private void CaptureFrame()
+    {
+        try
+        {
+            var image = windowCapture.CaptureForeground();
+            if (image == null) return;
+            frames.Add(image);
+            if (frames.Count > 3) frames.RemoveAt(0);
+        }
+        catch { }
+    }
     private void AddObservation(CapturedActivityContext? context)
     {
         if (context == null) return;
