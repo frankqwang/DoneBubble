@@ -1,103 +1,119 @@
 # DoneBubble
 
-Windows 10 / 11 桌面极简事务计数器：记录今天已经处理的事。数据留在本机，无登录、网络请求或遥测。
+DoneBubble 是一个 Windows 桌面极简事务记录工具。
 
-## 直接体验
+它只回答一个问题：**今天我已经处理了多少件事情？**
 
-从 [最新版本](https://github.com/frankqwang/DoneBubble/releases/latest) 下载 `DoneBubble.exe`，放到固定目录后双击运行。支持 Windows 10 / 11 x64，无需安装 .NET，也无需 WSL。
+DoneBubble 不管理待办、截止时间或项目。用户想到“这件事处理完了”，点击桌面气泡，选择一个负荷等级，几秒内完成记录。
 
-| 快速记录 | 独立休息倒计时 |
-| --- | --- |
-| ![快速记录](docs/images/quick-record.png) | ![休息倒计时](docs/images/rest.png) |
+## 核心体验
 
-界面图使用诊断测试数据。
+### 点击、分类、完成
 
-- 点击气泡 → 点击「轻 / 中 / 重」：无需输入，立即保存、计数 +1、自动收起。
-- 轻：普通回复、小操作；中：需要思考 / 沟通；重：复杂决策、事故、长时间排查。
-- 备注可不填，也可以先写备注再点分类；备注框内 Enter 仍可保存普通文字记录。轻 / 中 / 重分别计 1 / 2 / 3 分，未分类文字记录按 1 分计。气泡显示件数，展开卡片及历史标题显示今日累计分数。
-- 当天累计分数每达到或跨过 5、10、15……分，托盘提醒休息，并显示今日分数。超过门槛的余分保留，例如 4 分加重事项到 7 分会提醒，下次门槛仍是 10 分。同一门槛重启不重复，删除后重新达到已提醒过的门槛也不重复；次日重新计数。系统通知设置或勿扰模式可能隐藏提醒。
-- 每次休息提醒自动启动 10 分钟倒计时。独立置顶浮层以 46px 大字显示剩余时间，自动显示时不抢焦点；浮层里的 − / + 每次减少 / 增加 5 分钟。拖动标题或时间可移动浮层，位置会保存；气泡只显示件数。浮层随托盘隐藏，到期自动收起；Alt+F4 可单独隐藏，点击托盘可恢复，减到 0 结束本次休息。倒计时期间再次达到门槛不会重置时间。到期以托盘通知提醒一次。结束时间保存在设置中，重启继续、电脑休眠期间也计时。
-- 气泡移除了固定浅色描边，使用低饱和度负载色：每 5 分从灰绿经柔和琥珀过渡至豆沙红，5/10/15 分保持周期红色，下一分开启新周期。累计分数越高，每轮起始色越暖、整体越深；颜色变化有上限以保证数字清晰。删除和跨日刷新会重新计算颜色，悬停显示今日分数。
-- 拖动气泡调整位置；Esc 或点击外部收起，未提交内容保留在当前进程中。
-- 展开卡片中的「今日记录」显示倒序列表；× 直接删除误记录。
-- 托盘菜单只保留：显示 / 隐藏、开机启动、退出。今日记录、AI 调试和设置都从气泡展开卡片进入，减少托盘干扰。
-- 「AI 总结」默认开启。自动模式只观察前台应用、窗口标题、可访问文本控件的短摘录、程序路径、窗口切换和有效活动时长，不读取全局按键。连续活动会形成一个本地 session；应用或主题切换、空闲约 90 秒，或用户主动选择轻 / 中 / 重时截断 session。
-- 选择轻 / 中 / 重时会立即保存记录；若勾选 AI 总结，会把这一段 session 的上下文（必要时包含最多 3 张工作窗口截图）发送到配置的模型，生成简短摘要并把原始提示词、模型输出和截图证据与该条记录关联保存。AI 请求失败不阻塞手动记录。
-- 「今日记录」按时间倒序显示每条记录；有 AI 详情的记录显示「AI总结」入口，点击后打开可复用的单条详情窗口。详情、调试和历史窗口均支持 Esc 关闭；详情和调试窗口默认不置顶，气泡、分类确认和休息倒计时保持置顶。
-- 调试窗口还提供「截图并分析」：点击后暂时隐藏调试窗口，截取你刚才工作的前台窗口并发送给支持视觉输入的本地模型；截图只在内存中传输，不自动保存。自动识别模式不会截图。
-- 卡片 × 只收起卡片并保留气泡；Alt+F4 隐藏到托盘；关闭历史窗口只关闭历史视图。真正退出用托盘「退出」。
-- 开机启动默认关闭，用户在托盘中勾选后启用，无需管理员权限。启用前请将 exe 放在长期保留的位置；移动后重新勾选。
+桌面常驻气泡显示今天已处理的件数和累计负荷分数。点击后展开一张小卡片：
 
-## 开发与发布
+- **轻 · 1 分**：普通回复、小操作
+- **中 · 2 分**：需要思考或沟通
+- **重 · 3 分**：复杂决策、事故、长时间排查
 
-Windows 安装 .NET 8 SDK 或兼容的较新 SDK，在本目录执行：
+分类后立即保存并收起气泡。备注可以不填，也可以在分类前补充一句话；不输入文字也能快速记录。
+
+气泡颜色会随负荷从低饱和度的绿色逐渐过渡到红色。每累计 5 分提醒休息，并显示独立的倒计时浮层；默认休息 10 分钟，可用加减按钮按 5 分钟调整。
+
+### 今天的记录
+
+从气泡卡片打开「今日记录」，可以看到按时间倒序排列的事项、分类和分数。误记录可以直接删除。每条记录是独立的，不会被组织成待办列表。
+
+### 低打扰的窗口行为
+
+- 气泡、分类卡片和休息倒计时始终置顶。
+- 今日记录、AI 总结和 AI 调试窗口默认不置顶，可以与其他工作窗口切换。
+- 气泡和窗口都支持拖动，位置保存在本机。
+- 气泡卡片、今日记录、AI 总结和 AI 调试均支持 `Esc` 关闭；关闭详情只隐藏窗口，不会退出程序。
+- 点击窗口关闭按钮或 `Alt+F4` 会隐藏到托盘；只有托盘「退出」才会真正退出。
+
+## 可选：本地 AI 总结
+
+AI 总结默认开启，但不会自动替用户记账。用户选择轻、中、重时，DoneBubble 才会把这一段活动作为一个 session 提交给本地模型，生成简短摘要，并将结果绑定到刚保存的那条记录。
+
+活动 session 会动态采样前台工作：应用和窗口标题、窗口切换轨迹、可访问文本控件的短摘录、程序路径、有效活动时长，以及必要时最多 3 张工作窗口截图。应用或主题切换会结束当前 session；只有持续至少 10 分钟的 session 才会在切换时尝试自动分析，较短的 session 不会单独请求 AI。约 90 秒无操作也会清空当前 session。用户选择轻、中、重时，会立即结束并总结当时仍在进行的 session，再把结果绑定到这条记录。不会读取全局按键，也不会联网上传数据。
+
+在「今日记录」中，带有 AI 结果的记录会显示「AI总结」入口。打开后可查看：
+
+- AI 生成的简短摘要
+- 当时使用的截图证据（如果有）
+- 完整提示词
+- 模型原始输出
+
+气泡卡片中的「AI 调试」用于手动验证采集流程，可分别执行单次采集、近 30 秒动态采集或截图分析，并查看上下文、提示词和原始 HTTP 响应。调试结果不会自动入账。
+
+默认使用 LM Studio 的 OpenAI 兼容接口：
+
+```text
+http://127.0.0.1:1234/v1/chat/completions
+```
+
+模型和接口可在 `%LOCALAPPDATA%\\DoneBubble\\settings.json` 中调整。
+
+## 本地优先
+
+所有事务记录、设置和 AI 日志都保存在：
+
+```text
+%LOCALAPPDATA%\\DoneBubble\\
+├─ donebubble.db       SQLite 记录库
+├─ settings.json       窗口位置、开机启动和 AI 配置
+└─ ai-sessions.json    与记录关联的 AI 摘要、提示词和原始输出
+```
+
+程序不要求登录，不使用云同步，不把业务数据写入 exe 所在目录。SQLite 数据库会在首次启动时自动初始化，旧版本数据库会自动补充所需字段。
+
+托盘只保留三个基础入口：显示 / 隐藏、开机启动、退出。开机启动使用当前用户的 `HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run`，不需要管理员权限。
+
+## 下载和运行
+
+从 [Releases](https://github.com/frankqwang/DoneBubble/releases) 下载 Windows x64 发布包，放到固定目录后运行 `DoneBubble.exe`。自包含版本不要求系统预装 .NET，也不需要 WSL。
+
+支持 Windows 10 和 Windows 11。当前发布包是未签名的单文件程序，首次运行时 Windows SmartScreen 可能提示无法验证发布者；确认来源后即可运行。
+
+## 开发和发布
+
+项目使用 C#、.NET 8 和 WPF，采用轻量 MVVM；托盘使用 .NET 自带 Windows Forms `NotifyIcon`，SQLite 使用 `Microsoft.Data.Sqlite`。
+
+```text
+DoneBubble/
+├─ App.xaml / App.xaml.cs           应用生命周期、单实例、托盘
+├─ MainWindow.xaml / .xaml.cs       悬浮气泡、分类、拖动和焦点
+├─ RestWindow.xaml / .xaml.cs       独立休息倒计时
+├─ HistoryWindow.xaml / .xaml.cs    今日记录
+├─ AiLogWindow.xaml / .xaml.cs      单条 AI 总结详情
+├─ DebugWindow.xaml / .xaml.cs      AI 采集调试
+├─ Models/                           记录和设置模型
+├─ ViewModels/                       主界面状态
+├─ Services/                         数据库、设置、启动、采集和 AI
+└─ Properties/PublishProfiles/      Windows 发布配置
+```
+
+在 Windows 的 .NET 8 SDK 环境中执行：
 
 ```powershell
 dotnet build
 dotnet run
-```
-
-发布单文件、自包含 Windows x64 版本：
-
-```powershell
 dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true
 ```
 
-输出：`bin\Release\net8.0-windows\win-x64\publish\DoneBubble.exe`。
-
-也可执行 `dotnet publish -p:PublishProfile=Windows`。WPF 不启用裁剪。原生依赖纳入单文件，运行时由 .NET 解包到用户临时目录；这不影响业务数据保存位置。参见 [微软单文件部署说明](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/overview)。
-
-WSL 可通过 `dotnet.exe` 执行同样命令，使用宿主 Windows SDK。
-
-## 结构与技术决策
+发布文件位于：
 
 ```text
-DoneBubble/
-├── App.xaml / App.xaml.cs           生命周期、单实例、托盘
-├── MainWindow.xaml / .xaml.cs       气泡、拖动、焦点、中文输入、屏幕修正
-├── RestWindow.xaml / .xaml.cs       独立大字休息倒计时
-├── HistoryWindow.xaml / .xaml.cs    今日历史
-├── Models/RecordItem.cs
-├── ViewModels/MainViewModel.cs      输入、记录、计数、错误状态
-├── Services/
-│   ├── DatabaseService.cs           SQLite 初始化、参数化读写
-│   ├── SettingsService.cs           JSON 原子替换
-│   └── StartupService.cs            当前用户 Run 注册表
-├── Properties/PublishProfiles/Windows.pubxml
-├── SelfTest.cs                      隔离数据库与窗口冒烟测试
-└── scripts/Verify.ps1
+bin\\Release\\net8.0-windows\\win-x64\\publish\\DoneBubble.exe
 ```
 
-.NET 8 + WPF，轻量 MVVM。唯一直接 NuGet 依赖为 Microsoft.Data.Sqlite 8.0.24；托盘使用 .NET 自带 Windows Forms NotifyIcon。原生屏幕工作区与窗口坐标处理避免把像素与 WPF DIP 混用。
+WSL 可以通过 `dotnet.exe` 调用 Windows SDK 执行相同命令，但 WPF 窗口和托盘只能在 Windows 桌面环境中运行。
 
-数据位于 `%LOCALAPPDATA%\DoneBubble\`：
+## 当前边界
 
-- `donebubble.db`：Records(Id, Content, CreatedAt, Category)，旧数据库自动添加可空 Category 列，保留原有记录，自动建表及时间索引。
-- `settings.json`：windowX、windowY、autoStart、aiAssistEnabled、aiEndpoint、aiModel。
-
-CreatedAt 保存记录时本地时间；当天查询用半开日期范围，以利用索引。每秒检查日期变化；展开或查看历史时立即刷新。跨时区后旧记录仍归属于原先记录的本地日期。计数由成功读出的今日记录计算；数据库失败显示「—」而非误报 0，保存失败保留输入。
-
-## 验证
-
-发布后，在 Windows PowerShell 中执行：
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\scripts\Verify.ps1
-```
-
-诊断使用独立临时目录，不读写用户记录与开机启动注册表。覆盖初始化、日期边界、排序、SQL 参数、删除、空输入、计数、失败保留草稿、设置持久化、窗口加载、Enter 保存收起与关闭隐藏。结果写入 `verification.txt`，另输出实际 WPF 渲染图。
-
-已在 Windows 上使用 .NET SDK 9.0.311 构建 net8.0-windows，并实际运行自包含发布包完成验证。验证结果由脚本在本地生成。
-
-仍需人工在目标桌面验证：中文输入法候选确认、跨不同缩放比例显示器拖动、插拔显示器、托盘操作，以及真实登录后的开机启动。
-
-## MVP 限制
-
-- 仅 Windows，当前发布目标 x64；未签名、无安装器和自动更新。
-- 仅显示今天的历史，过往记录保留在 SQLite；暂无历史日期浏览、编辑或导出。
-- 删除立即生效，暂无撤销；输入上限 2000 字符。
-- 草稿仅保留在内存中；退出前未提交的内容不会落盘。
-- AI 识别是启发式候选：动态采样（约 5～60 秒）累积前台活动；主题切换或用户选择分类时提交 session。只发送应用上下文、窗口切换轨迹、可访问文本短摘录和必要的截图，不读取全局按键，不自动记录剪贴板内容或密码框。AI 只生成摘要，不自动入账；最终记录由用户的轻 / 中 / 重选择确认。
-- 默认接口为 LM Studio 的 `http://127.0.0.1:1234/v1/chat/completions`，模型名按当前加载模型 ID 修改 `%LOCALAPPDATA%\DoneBubble\settings.json` 的 `aiModel`。调试窗口可手动采集单次、近 30 秒序列或截图，查看上下文、完整提示词、原始 HTTP 输出和解析结果；调试不会自动入账。
-- SQLite 本地操作设置 2 秒锁等待；遇到磁盘或锁异常显示可重试错误。
-- 开机启动状态以注册表为准，并同步到设置文件；Windows 启动应用管理中的额外禁用仍由系统控制。
+- 只展示今天的记录，历史数据仍保留在 SQLite，暂未提供日期浏览、编辑和导出。
+- 删除记录立即生效，暂无撤销。
+- AI 是辅助总结，不保证识别出完整工作内容，也不会自动把候选计入今日数量。
+- 截图和可访问文本可能受目标应用权限、窗口类型和隐私保护限制；无法采集时仍可正常手动记录。
+- 发布包当前未签名、没有安装器和自动更新，目标架构为 Windows x64。
