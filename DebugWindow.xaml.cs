@@ -104,13 +104,21 @@ public partial class DebugWindow : Window
         await Task.Delay(220);
         var samples = new List<ActivityContext>();
         var images = new List<byte[]>();
-        for (int i = 0; i < 3; i++)
+        var seenWindows = new HashSet<string>(StringComparer.Ordinal);
+        for (int second = 0; second <= 30; second++)
         {
-            var sample = collector.Capture(TimeSpan.FromSeconds(i * 15));
-            if (sample != null) samples.Add(sample);
-            var image = capture.CaptureForeground();
-            if (image != null) images.Add(image);
-            if (i < 2) await Task.Delay(TimeSpan.FromSeconds(15));
+            var sample = collector.Capture(TimeSpan.FromSeconds(second));
+            if (sample != null)
+            {
+                string key = $"{sample.Application}|{sample.WindowTitle}|{sample.FocusedControl}";
+                if (seenWindows.Add(key)) samples.Add(sample);
+            }
+            if (second is 0 or 15 or 30)
+            {
+                var image = capture.CaptureForeground();
+                if (image != null) images.Add(image);
+            }
+            if (second < 30) await Task.Delay(TimeSpan.FromSeconds(1));
         }
         if (bubbleWasVisible) bubble!.Show();
         if (wasVisible) Show();
