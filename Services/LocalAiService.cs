@@ -14,10 +14,10 @@ public sealed class LocalAiService : IDisposable
     {
         return (await AnalyzeAsync(context, settings, cancellationToken).ConfigureAwait(false)).Candidate;
     }
-    public async Task<AiAnalysisResult> AnalyzeAsync(ActivityContext context, Settings settings, CancellationToken cancellationToken = default)
+    public async Task<AiAnalysisResult> AnalyzeAsync(ActivityContext context, Settings settings, CancellationToken cancellationToken = default, bool summarizeOnly = false)
     {
-        if (string.IsNullOrWhiteSpace(settings.AiEndpoint)) return new(BuildPrompt(context), "", null, "没有配置 AI 地址。");
-        string prompt = BuildPrompt(context);
+        if (string.IsNullOrWhiteSpace(settings.AiEndpoint)) return new(BuildPrompt(context, summarizeOnly), "", null, "没有配置 AI 地址。");
+        string prompt = BuildPrompt(context, summarizeOnly);
         object body = IsDeepSeek(settings) ?
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, thinking = new { type = "disabled" }, response_format = JsonObjectFormat, messages = new[] { new { role = "user", content = prompt } } } :
             new { model = settings.AiModel, temperature = 0.1, max_tokens = 240, stream = false, reasoning_effort = "none", chat_template_kwargs = new { enable_thinking = false }, response_format = JsonSchemaFormat, messages = new[] { new { role = "user", content = prompt } } };
@@ -54,7 +54,9 @@ public sealed class LocalAiService : IDisposable
         if (!response.IsSuccessStatusCode) return new(prompt, raw, null, $"{ProviderName(settings)} 返回 HTTP {(int)response.StatusCode}。");
         return ParseResult(prompt, raw, TimeSpan.FromSeconds(30), "时间窗口画面");
     }
-    private static string BuildPrompt(ActivityContext context) => $"你是一个极简事务记录助手。根据本地活动上下文和一段时间的证据，判断是否可能完成了一件事。优先依据应用/窗口变化、焦点控件、有效活动时长和输入活跃度；剪贴板只能作为辅助线索，不要复述其中的敏感内容。不要编造看不到的细节。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
+    private static string BuildPrompt(ActivityContext context, bool summarizeOnly) => summarizeOnly
+        ? $"你是一个极简事务记录助手。用户已经主动选择了事务分类，现在只需要根据本地活动上下文和时间证据生成一句简短、事实性的工作摘要。不要再次判断用户是否完成；即使证据有限也必须返回 done=true，并明确使用‘处理了…’或‘在…中工作’这类谨慎表述。不要编造看不到的细节；剪贴板只作辅助线索，不要复述敏感内容。只返回 JSON，不要 Markdown：{{\\\"done\\\":true,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。"
+        : $"你是一个极简事务记录助手。根据本地活动上下文和一段时间的证据，判断是否可能完成了一件事。优先依据应用/窗口变化、焦点控件、有效活动时长和输入活跃度；剪贴板只能作为辅助线索，不要复述其中的敏感内容。不要编造看不到的细节。只返回 JSON，不要 Markdown：{{\\\"done\\\":true或false,\\\"summary\\\":\\\"不超过24字的事实描述\\\",\\\"category\\\":\\\"轻\\\"或\\\"中\\\"或\\\"重\\\",\\\"confidence\\\":0到1}}。{context.PromptText}。持续阅读、等待、娱乐、密码输入或无法判断时 done=false。";
     private static object JsonSchemaFormat => new { type = "json_schema", json_schema = new { name = "donebubble_result", strict = true, schema = new { type = "object", properties = new { done = new { type = "boolean" }, summary = new { type = "string" }, category = new { type = "string", @enum = new[] { "轻", "中", "重" } }, confidence = new { type = "number" } }, required = new[] { "done", "summary", "category", "confidence" }, additionalProperties = false } } };
     private static object JsonObjectFormat => new { type = "json_object" };
     private static bool IsDeepSeek(Settings settings) => settings.AiEndpoint.Contains("api.deepseek.com", StringComparison.OrdinalIgnoreCase) || settings.AiModel.Contains("deepseek", StringComparison.OrdinalIgnoreCase);

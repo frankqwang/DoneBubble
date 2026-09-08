@@ -15,9 +15,11 @@ public sealed class AiSessionLogService
     }
     public void Add(AiAnalysisResult result, long? recordId = null)
     {
-        if (result.Candidate == null) return;
         var items = Load(); var next = items.Count == 0 ? 1 : items[^1].Id + 1;
-        items.Add(new AiSessionLog(next, recordId, DateTime.Now, result.Candidate.Summary, result.Candidate.SuggestedCategory, result.Candidate.Confidence, result.Prompt, result.RawResponse));
+        string summary = result.Candidate?.Summary ?? "AI 未确认完成事项";
+        string category = result.Candidate?.SuggestedCategory ?? "未确认";
+        double confidence = result.Candidate?.Confidence ?? 0;
+        items.Add(new AiSessionLog(next, recordId, DateTime.Now, summary, category, confidence, result.Prompt, result.RawResponse));
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         File.WriteAllText(path + ".tmp", JsonSerializer.Serialize(items, Options)); File.Move(path + ".tmp", path, true);
     }

@@ -63,7 +63,7 @@ public sealed class ActivityMonitor : IDisposable
         busy = true;
         try
         {
-            var result = await ai.AnalyzeAsync(context, settings.Value).ConfigureAwait(false);
+            var result = await ai.AnalyzeAsync(context, settings.Value, default, true).ConfigureAwait(false);
             if (result.Candidate != null) lastCandidate = DateTime.Now;
             return result;
         }
