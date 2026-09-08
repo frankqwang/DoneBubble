@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+verification.txt*
+*.db
+*.db-shm
+*.db-wal
+settings.json
+artifacts/

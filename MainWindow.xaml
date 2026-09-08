@@ -1,0 +1,28 @@
+<Window x:Class="DoneBubble.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Title="DoneBubble" Width="76" Height="76" WindowStyle="None" AllowsTransparency="True" Background="Transparent" Topmost="True" ShowInTaskbar="False" ResizeMode="NoResize" FontFamily="Segoe UI, Microsoft YaHei UI" Foreground="#EDF2F7" UseLayoutRounding="True" PreviewKeyDown="Window_KeyDown">
+ <Window.Resources><BooleanToVisibilityConverter x:Key="Bool"/></Window.Resources>
+ <Grid Margin="10">
+  <Border x:Name="Bubble" Background="{Binding BubbleBrush}" CornerRadius="28" BorderThickness="0" MouseLeftButtonDown="Bubble_Down" MouseMove="Bubble_Move" MouseLeftButtonUp="Bubble_Up" Cursor="Hand" ToolTip="{Binding BubbleHint}" AutomationProperties.Name="展开 DoneBubble">
+   <Border.Effect><DropShadowEffect BlurRadius="12" ShadowDepth="2" Opacity="0.25"/></Border.Effect>
+   <TextBlock Text="{Binding CountLabel}" Foreground="#25332E" FontSize="22" FontWeight="SemiBold" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+  </Border>
+  <Border x:Name="Card" Visibility="Collapsed" Background="#F5222B38" CornerRadius="18" BorderBrush="#4C596B" BorderThickness="1" Padding="18">
+   <Grid>
+    <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid><TextBlock Text="{Binding Heading}" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/><Button x:Name="CollapseButton" Content="×" HorizontalAlignment="Right" Background="Transparent" Padding="7,0" FontSize="20" Click="Collapse_Click" ToolTip="收起卡片" AutomationProperties.Name="收起卡片"/></Grid>
+    <UniformGrid Grid.Row="2" Columns="3" Margin="0,16,0,0">
+     <Button x:Name="LightButton" Tag="轻" Click="Category_Click" Background="#30483F" Margin="0,0,6,0" Padding="6,12" ToolTip="普通回复、小操作"><StackPanel><TextBlock Text="轻 · 1" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#BCE5CC"/><TextBlock Text="回复 · 小操作" FontSize="10" Margin="0,7,0,0"/></StackPanel></Button>
+     <Button Tag="中" Click="Category_Click" Background="#34445B" Margin="0,0,6,0" Padding="6,12" ToolTip="需要思考 / 沟通"><StackPanel><TextBlock Text="中 · 2" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#BDD7FF"/><TextBlock Text="思考 · 沟通" FontSize="10" Margin="0,7,0,0"/></StackPanel></Button>
+     <Button Tag="重" Click="Category_Click" Background="#504235" Padding="6,12" ToolTip="复杂决策、事故、长时间排查"><StackPanel><TextBlock Text="重 · 3" FontSize="21" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="#F1D0AC"/><TextBlock Text="决策 · 排查" FontSize="10" Margin="0,7,0,0"/></StackPanel></Button>
+    </UniformGrid>
+    <Border Grid.Row="3" Background="#151C27" CornerRadius="10" Margin="0,16,0,0" Padding="12,10">
+     <Grid>
+      <TextBox x:Name="Input" Text="{Binding Draft, UpdateSourceTrigger=PropertyChanged}" Background="Transparent" Foreground="#F2F5F8" BorderThickness="0" FontSize="14" CaretBrush="#B9DCD0" MaxLength="2000" AcceptsReturn="False" VerticalContentAlignment="Center" AutomationProperties.Name="备注（可不填）"/>
+      <TextBlock Text="备注（可不填）" Foreground="#8F9CAC" IsHitTestVisible="False" FontSize="14"><TextBlock.Style><Style TargetType="TextBlock"><Setter Property="Visibility" Value="Collapsed"/><Style.Triggers><DataTrigger Binding="{Binding Draft}" Value=""><Setter Property="Visibility" Value="Visible"/></DataTrigger></Style.Triggers></Style></TextBlock.Style></TextBlock>
+     </Grid>
+    </Border>
+    <TextBlock Grid.Row="4" Text="{Binding Error}" Visibility="{Binding HasError, Converter={StaticResource Bool}}" Foreground="#FFB8AE" TextWrapping="Wrap" FontSize="12" Margin="0,10,0,0"/>
+    <Grid Grid.Row="5" Margin="0,12,0,0"><TextBlock Text="每满 5 分休息 · Esc 收起" Foreground="{StaticResource Muted}" FontSize="11" VerticalAlignment="Center"/><Button Content="今日记录 →" HorizontalAlignment="Right" Background="Transparent" Foreground="#B8DCCD" Padding="4" Click="History_Click"/></Grid>
+   </Grid>
+  </Border>
+ </Grid>
+</Window>
