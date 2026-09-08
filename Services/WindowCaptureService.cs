@@ -24,6 +24,14 @@ public sealed class WindowCaptureService
         return stream.ToArray();
     }
     public byte[] OptimizeForModel(byte[] image, int maxDimension = 1280)
+        => Reencode(image, maxDimension, 58L);
+
+    // Evidence is kept locally for later inspection, but should not embed a
+    // full multi-monitor bitmap for every timer tick in the JSON log.
+    public byte[] OptimizeForArchive(byte[] image, int maxDimension = 1600)
+        => Reencode(image, maxDimension, 50L);
+
+    private static byte[] Reencode(byte[] image, int maxDimension, long jpegQuality)
     {
         using var source = new Bitmap(new MemoryStream(image));
         double scale = Math.Min(1d, maxDimension / (double)Math.Max(source.Width, source.Height));
@@ -38,7 +46,7 @@ public sealed class WindowCaptureService
         using var output = new MemoryStream();
         var encoder = ImageCodecInfo.GetImageEncoders().First(item => item.FormatID == ImageFormat.Jpeg.Guid);
         using var quality = new EncoderParameters(1);
-        quality.Param[0] = new EncoderParameter(Encoder.Quality, 58L);
+        quality.Param[0] = new EncoderParameter(Encoder.Quality, jpegQuality);
         resized.Save(output, encoder, quality);
         return output.ToArray();
     }

@@ -109,6 +109,7 @@ public sealed class ActivityMonitor : IDisposable
         {
             var image = windowCapture.CaptureScreen();
             if (image == null) return;
+            image = windowCapture.OptimizeForArchive(image);
             // A timer tick is not necessarily a meaningful change. Keep every
             // distinct view, but suppress near-identical frames so a quiet
             // session does not create hundreds of megabytes of evidence.
