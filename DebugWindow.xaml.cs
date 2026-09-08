@@ -20,7 +20,7 @@ public partial class DebugWindow : Window
         var captured = await CaptureUnderlyingWindowAndImageAsync();
         ShowContext(captured.Context);
         if (captured.Image == null) { Status.Text = "未能截图目标窗口"; return; }
-        Status.Text = $"已截图 {captured.Image.Length / 1024} KB，正在请求视觉模型…";
+        ScreenshotView.Source = ToImage(captured.Image); Status.Text = $"已截图 {captured.Image.Length / 1024} KB，正在请求视觉模型…";
         try
         {
             var result = await ai.AnalyzeImageAsync(Convert.ToBase64String(captured.Image), captured.Context?.PromptText ?? "未读取到文字上下文", settings);
@@ -63,6 +63,10 @@ public partial class DebugWindow : Window
         var image = capture.CaptureForeground();
         if (wasVisible) Show();
         return (context, image);
+    }
+    private static BitmapImage ToImage(byte[] bytes)
+    {
+        using var stream = new MemoryStream(bytes); var image = new BitmapImage(); image.BeginInit(); image.CacheOption = BitmapCacheOption.OnLoad; image.StreamSource = stream; image.EndInit(); image.Freeze(); return image;
     }
     protected override void OnClosed(EventArgs e) { ai.Dispose(); base.OnClosed(e); }
 }
